@@ -230,7 +230,7 @@ to moveAround
   rt random 50
   lt random 50
   fd 1
-  if (vFrust > 0) [select-managers]
+  if (vFrust > 0 and count-managers < 3) [select-managers]
   if not (region = "empty" or region = "TownSquare") [
     ; find a place that is not a building!
     let footstep neighborhood with [region = "empty" or region = "TownSquare"] 
@@ -467,12 +467,15 @@ to send-message [receiver performative content]
 end
 
 to announce-demonstration
-  ask citizens with [color = green] [
-    foreach friendList [ friend ->
-      ask friend [
-        send-message self "request" "Join demonstration?"
-        print ["message sent"]
-      ]
+  ask citizens with [color = green] [  ; Only managers
+    ask friendList [  ; Directly ask each agent in the agentset
+      send-message myself "request" "Join demonstration?"
+      print["Message sent"]
     ]
   ]
 end
+
+to-report count-managers
+  report count citizens with [color = green]
+end
+
