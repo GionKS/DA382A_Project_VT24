@@ -312,26 +312,14 @@ end
 to listen-to-messages
   let msg 0
   let performative 0
-  let content 0
+  
    set msg get-message
    set performative get-performative msg
   
   if performative = "meeting-request" [
-    ifelse fear < 0.5 [ ;HITTAR BARA PÅ FATTAR 0 vill träffa kompis typ
-      ;set content get-content msg   
-      set destinationxy get-content msg 
+    set proState "MeetingFriends"
+  ] 
       
-  ] [;VILL INTE
-    ]
-  ]
-  if performative = "meetingatmine" [
-    ifelse fear < 0.5 [ ;HITTAR BARA PÅ FATTAR 0 vill träffa kompis typ
-      set content get-content msg    
-  ] [ ; VILL INTE
-    ]
-  ]  
-  
-    
 end  
 
 
@@ -373,7 +361,47 @@ to unemployed
 end
 
 to meeting
+  
+ let msg 0  
+  
   if Debug [print (word who " is in the proactive state MeetingFriends")]
+
+  if (localxy = destinationxy) and (not initialCondition) [
+    set initialCondition true
+    set agTimer1 timeTaker (random 2) 55
+    if Debug [print (word who " has arrived at a friends place")] ; SKICKA TILL KOMPIS EN INFORM ATT VI ÄR FRAMME? 
+  ]
+    if initialCondition and not finalCondition [;wait until timeTaker is finished
+    if localtimeTakerDone agTimer1 [set finalCondition true]
+  ]
+  if finalCondition [
+    set finishedState true
+    set initialCondition false
+    set finalCondition false
+    if Debug [print (word who " has decided to go home from THE VERY BEST FRIEND")]
+    set destinationxy homeLoc ; go home again
+  ]
+  
+  
+  
+  
+  ifelse fear < 0.5 [        
+          
+     ifelse pArrest < 0.5 [
+      
+      set destinationxy get-content msg
+      send create-reply "agree" msg ;SES HOS DIG      
+      
+      ]   
+    
+    [ send add-content homeLoc create-reply "agree" msg; SES HOS MIG 
+      ; VÄNTA PÅ ATT KOMPIS KOMMER HIT. DÅ SKICKER HEN ETT INFORM HEY IM HERE 
+      ]
+     
+  ] [ send create-reply "refuse" msg    
+    ]
+  
+  
   ;ifelse (ask friendList [fearValue]) > fear 
   ;[ set fear (1 + f) * fear ]
   ;[ set fear (1 - f) * fear ] TODO: ask friend
