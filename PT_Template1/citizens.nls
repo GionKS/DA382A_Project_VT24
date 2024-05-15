@@ -96,6 +96,7 @@ to setup-citizens
     set finishedState false
     set initialCondition false
     set finalCondition false
+    set vFrust 0
   ]
 
 end
@@ -209,6 +210,7 @@ to bidePrisonTime
     if any? places [move-to one-of places]
     set inPrison? false
     set color yellow
+    increase-frustration
     if Debug [print (word "citizen " who "is released from prison") ]
   ]
 end
@@ -228,6 +230,7 @@ to moveAround
   rt random 50
   lt random 50
   fd 1
+  if (vFrust > 0) [select-managers]
   if not (region = "empty" or region = "TownSquare") [
     ; find a place that is not a building!
     let footstep neighborhood with [region = "empty" or region = "TownSquare"] 
@@ -432,4 +435,44 @@ to handle-response
   ]
 end
 
+to select-managers
+  ask turtles with [color = green] [
+    set color white  ; Antag att vit är standardfärgen för icke-managers
+    ;set vFrust 0
+  ]
+  let managers sort-on [ (- vFrust) ] citizens
+  ifelse length managers > 3 [
+    set managers sublist managers 0 3
+  ][
+  
+  ]
+  set managers turtle-set managers  ; Konvertera listan till en agentset
+  ask managers [
+    print(word "Selected manager: " who "with frustration: " vFrust)
+    become-manager
+  ]
+end
 
+to become-manager
+  set color green
+  set friendList (other turtles with [color != green])
+  announce-demonstration
+end
+
+to send-message [receiver performative content]
+  let msg (list self performative content)
+  ask receiver[
+  set incoming-queue lput msg incoming-queue
+  ]
+end
+
+to announce-demonstration
+  ask citizens with [color = green] [
+    foreach friendList [ friend ->
+      ask friend [
+        send-message self "request" "Join demonstration?"
+        print ["message sent"]
+      ]
+    ]
+  ]
+end
