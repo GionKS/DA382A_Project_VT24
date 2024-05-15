@@ -97,6 +97,7 @@ to setup-citizens
     set initialCondition false
     set finalCondition false
     set vFrust 0
+    set managers-previously-announced []
   ]
 
 end
@@ -448,7 +449,7 @@ to select-managers
   ]
   set managers turtle-set managers  ; Konvertera listan till en agentset
   ask managers [
-    print(word "Selected manager: " who "with frustration: " vFrust)
+    ;print(word "Selected manager: " who "with frustration: " vFrust)
     become-manager
   ]
 end
@@ -456,13 +457,22 @@ end
 to become-manager
   set color green
   set friendList (other turtles with [color != green])
-  announce-demonstration
+  ; Ensure demonstration is only announced under specific conditions, e.g., only once when becoming a manager
+  if not member? myself managers-previously-announced [
+    announce-demonstration
+    set managers-previously-announced lput myself managers-previously-announced
+  ]
 end
+
 
 to send-message [receiver performative content]
   let msg (list self performative content)
+  let sender-who [who] of myself  ; Capture the sender's who number before entering the ask block
+  let message-content content  ; Create a local variable to capture the content before the ask block
+
   ask receiver[
-  set incoming-queue lput msg incoming-queue
+    set incoming-queue lput msg incoming-queue
+    print (word "Message sent from " sender-who " to " [who] of myself ": " message-content)
   ]
 end
 
@@ -470,9 +480,9 @@ to announce-demonstration
   ask citizens with [color = green] [  ; Only managers
     ask friendList [  ; Directly ask each agent in the agentset
       send-message myself "request" "Join demonstration?"
-      print["Message sent"]
     ]
   ]
+  print "Announcement made for demonstration."
 end
 
 to-report count-managers
