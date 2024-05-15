@@ -485,7 +485,7 @@ SWITCH
 383
 Debug
 Debug
-0
+1
 1
 -1000
 
@@ -600,6 +600,17 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot glbFear"
+
+MONITOR
+329
+138
+548
+183
+NIL
+count turtles with [color = green]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
