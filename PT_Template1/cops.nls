@@ -49,6 +49,7 @@ create-cops num-cops [
     set police-chief? false
     set colleagues []
     set choose-cops? true
+    set extra-cops? false
     set coordinate 00
   ]
  
