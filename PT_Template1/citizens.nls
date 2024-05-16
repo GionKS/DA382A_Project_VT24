@@ -191,6 +191,7 @@ to meet_friends
       ;; Add the sender and receiver to the message
       set msg add-sender who msg
       set msg add-receiver friend msg
+      set msg add-content (list "homeLoc" homeLoc) msg
       ;; Send the message
       send msg
   ]
@@ -204,11 +205,15 @@ to reply-meeting
       ;; Get the content of the message
       let content get-content msg
       if content = "No" [
-        ;no
+        stop
       ]ifelse content = "yes, at your place"[
         set destinationxy homeLoc
+        move-to destinationxy
       ]
       [
+        let meeting-location item 1 get-content msg
+        set destinationxy meeting-location
+        move-to destinationxy
         ;; Citizen goes to the friend's place
       ]
     ]
