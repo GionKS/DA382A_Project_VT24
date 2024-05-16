@@ -123,6 +123,7 @@ to setup
   ; setup cops
   setup-cops
 
+
   ; time section
   initTime ; initialize the time and clock variables
 
@@ -178,6 +179,7 @@ to go
       ]
     if (breed = cops) [
       cop_behavior ; code as defined in the include-file "cops.nls"
+      if ticks = 1 [test-message]
       ]
 
   ]
@@ -248,7 +250,7 @@ num-citizens
 num-citizens
 1
 150
-21.0
+150.0
 1
 1
 NIL
@@ -297,7 +299,7 @@ num-cops
 num-cops
 0
 150
-9.0
+46.0
 1
 1
 NIL
@@ -312,7 +314,7 @@ citizen-vision
 citizen-vision
 1
 10
-3.0
+1.9
 0.1
 1
 NIL
@@ -327,7 +329,7 @@ cop-vision
 cop-vision
 1
 100
-9.0
+100.0
 0.1
 1
 NIL
@@ -507,7 +509,7 @@ CHOOSER
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
-1
+0
 
 MONITOR
 221
