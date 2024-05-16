@@ -52,7 +52,7 @@ create-cops num-cops [
     set choose-cops? true
   ]
   
-  set demonstrator-matrix n-values 10 [n-values 10 [0]]
+
   
   ; Choose one police chief
   ask one-of cops [
@@ -100,15 +100,17 @@ to cop_behavior
       let selected-cops-list sort n-of num-to-choose cops
       
       ; For each selected cop create and send a message
+      let msg create-message "patrol"
+      set msg add-content "Patrol Town Square" msg 
       foreach selected-cops-list [this-cop ->
         ask this-cop [
-          let msg create-message "patrol"
-          set msg add-content "Patrol Town Square" msg
           set msg add-receiver who msg  
           set chosen-cops? true  
-          send msg  
+          set shape "car"
         ]
       ]
+      send msg 
+      
       ; Make sure this only happens once
       set choose-cops? false
       print (word who " the police-chief has chosen 10-20% of the police core and to send them a request-message ")
@@ -124,14 +126,11 @@ to cop_behavior
           let report-ycor item (position "coordinates" data + 2) data
           set cluster-size item (position "cluster" data + 1) data
           
-          ; Update the matrix
-          let row (item report-ycor demonstrator-matrix)
-          set row replace-item report-xcor row cluster-size
-          set demonstrator-matrix replace-item report-ycor demonstrator-matrix row
+          update-town-square-matrix report-xcor report-ycor cluster-size
           
+         
           print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
-          
-          
+              
           if cluster-size > 5 [
             let ratio 500  ; 1 cop for every 500 demonstrators based on "antalet poliser per 100.000 invånare i Sverige (200,1)."
             let required-cops ceiling (cluster-size / ratio)  ; round up
@@ -140,44 +139,27 @@ to cop_behavior
             ; Determine the number of extra cops not more than available-cops
             let extra-cops min (list required-cops available-cops)
             
+            let msg create-message "stop-demonstration"
+            set msg add-content (list report-xcor report-ycor) msg
             ask n-of extra-cops cops with [not chosen-cops?] [
-              let target-patch patch report-xcor report-ycor
-              face target-patch
-              move-to target-patch
-              ; Order
+              set msg add-reciver who msg
               set extra-cops? true
             ]
+            send msg
           ]
         ]
       ]
     ]
     
-    let matrix-empty? false
-    
-    ; Iterate over each row in the matrix
-    foreach demonstrator-matrix [row ->
-      ; Iterate over each element in the row
-      foreach row [value ->
-        if value > 0 [
-          set matrix-empty? true
-          ; Exit the inner loop early if a non-zero is found
-          stop
-        ]
-      ]
-      ; Check after inner loop if already found a non-zero
-      if matrix-empty? [ stop ]
-    ]
-    
+        
     ; Determine when to withdraw extra cops only
-    if cluster-size < 3 and matrix-empty? [
-      ask cops with [extra-cops?] [
-        patrolAround
-        set extra-cops? false 
-      ]
-      ; Reset matrix
-      set demonstrator-matrix n-values 10 [n-values 10 [0]]
-    ]
-    
+    if cluster-size < 3 [
+            let msg create-message "retreat"
+            ask n-of extra-cops cops with [extra-cops?] [
+              set msg add-reciver who msg
+              set extra-cops? true
+            ]
+            send msg
   ]
   
   ;################## REACTIVE BEHAVIOR ####################################
