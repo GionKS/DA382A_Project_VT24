@@ -107,6 +107,8 @@ end
 to citizen_behavior
 
   if Debug [print (word who " has fear: " fearValue)]
+  
+  check_messages
 
 ;########## UPDATING the Beliefs, e.g. the agent's information about its environment ##############
 
@@ -150,36 +152,6 @@ set pArrest 1 - exp((- k * C) / (A + 1))  ; probability of being arrested, updat
   )
 
 
-end
-
-
-to-report fearValue  ; This is to get the fear of a friend
-  report fear
-end
-
-to update_fear  ; Call this when calibrating weekly fear
-  set fear 0.5 * (glbFear + fear)
-end
-
-
-to decrease-frustration  ; decrease frustration TODO: implement when
- set vfrust vfrust * (1 - exp(- alfaFrust))
-end
-
-to increase-frustration  ; increases frustration TODO: implement when the cops forbid citizens to do what they want
-  set vfrust vfrust + 1
-end
-
-to update-anger
-  set anger vfrust * (1 - L)
-end
-
-to increase-anger
-  ifelse inPrison? [set anger anger * ( 1 + 0.1 * percAnger)][ set anger anger * ( 1 + percAnger)]
-end
-
-to decrease-anger
-  set anger anger * (1 - 10 * percAnger)
 end
 
 
@@ -273,13 +245,6 @@ to proactiveBehavior
   ; like for example walkdesire?, destinationxy, etc.
   ;
 
-  let demoUtil demonstration-utility
-  let resigUtil resignation-utility
-
-  if (demoUtil > resigUtil) [set proState "Demonstration"]
-
-  if (resigUtil > demoUtil) [set proState "Resignation"]
-
 
  ; For testing
   ;set proState item (random 3) StateList
@@ -313,8 +278,12 @@ to proactiveBehavior
 
   if (resigUtil > demoUtil) [set proState "Resignation"]
 
-
-
+;TIME FOR DEMO CHECK
+  if demo-time != 0 and ticks >= demo-time [
+    set prostate "Demonstration"
+  ]
+  
+  
   ; For testing
   ;set proState item (random 3) StateList
   ;if Debug [print (word who "deliberated proState = " proState)]
@@ -454,3 +423,48 @@ end
 to decrease-anger
   set anger anger * (1 - 10 * percAnger)
 end
+
+;------------------------------------------------------------------------------------------------------------
+
+to check_messages
+  
+    while [not empty? incoming-queue] [
+    let message get-message
+    handle_message message
+  ]
+  
+end
+to handle_message [message]
+  let performative get-performative message
+  
+  if performative = "demo-announcement" [
+    let sender get-sender message
+    let participate? evaluate_demo_participation
+    let reply create-reply (ifelse-value participate? ["accept demonstration"] ["deny demonstration"]) message
+    ask turtle sender [receive reply]
+    send_task_announcement_to_friends message
+  ]
+
+  if performative = "demo-update" [
+    let time-for-demo get-content message
+    set demo-time time-for-demo
+  ]
+end
+
+
+to-report evaluate_demo_participation
+  let demoUtil demonstration-utility
+  let resigUtil resignation-utility
+  report demoUtil > resigUtil
+end
+
+to send_task_announcement_to_friends [message]
+  foreach friendList [friend ->
+    let friend-msg add-receiver friend message
+    send friend-msg
+  ]
+end
+
+
+
+
