@@ -37,6 +37,7 @@ breed [cops cop] ;
 globals [
   ;
   town-square-matrix
+  percentage-matrix
 
   ; Global variables used by the citizen agents to adapt their local variables
   L;------------------------current global government legitimacy
