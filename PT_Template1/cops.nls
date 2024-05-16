@@ -13,24 +13,17 @@
 
 
 cops-own [
-  ;pvision ; cop-vision is set by slider
+  pvision ; cop-vision is set by slider
   cop-speed
   order ; Received order that currently is being carried out. Enumeration = rule-of-law,
   ; arrest-troublemakers,looking-for-terrorists, suppress-riots
   last-hunted
   last-suspect
-  police-chief? ; Police chief or not
-  colleagues ; List of all the police chiefs
-  choose-cops? ; Flag for assigning the 10-20% of the police core to patrol town square
-  chosen-cops? ; The ones chosen to patrol Town square
-  extra-cops? ; The remaining cops that gets sent to the Town square
-  cluster-size ; The demonstrators reported from the cop agents
+  last-xcord
+  last-ycord
+  is-chief
+   
 ]
-
-
-
-
-
 
 
 to setup-cops
@@ -47,25 +40,13 @@ create-cops num-cops [
     set incoming-queue []
     set last-hunted nobody
     set last-suspect nobody
-    set police-chief? false
-    set colleagues []
-    set choose-cops? true
+    set min-distance 10
   ]
   
-
-  
-  ; Choose one police chief
-  ask one-of cops [
-    set police-chief? true
-    set shape "person police-chief"
-    
-  ]
-  ask cops [
-    ; Create a list of all the cop-agents (except itself)
-    set colleagues other cops with [self != myself]
-  ]
   
 end
+
+
 
 
 to cop_behavior
@@ -84,85 +65,16 @@ to cop_behavior
     set order "rule-of-law"
   ] 
   if copSource = "arrest-troublemakers"
-  [
-    set order "arrest-troublemakers"
-    
+[
+  set order "arrest-troublemakers"
+
   ]
   ;set order "rule-of-law"
   ;set order "arrest-troublemakers"
-  
-  if police-chief? [
+
     
-    if choose-cops? [ 
-      ; Select 10-20% of cops randomly
-      let percent 0.1 + random-float 0.1
-      let num-to-choose round (percent * count cops)
-      let selected-cops-list sort n-of num-to-choose cops
-      
-      ; For each selected cop create and send a message
-      let msg create-message "patrol"
-      set msg add-content "Patrol Town Square" msg 
-      foreach selected-cops-list [this-cop ->
-        ask this-cop [
-          set msg add-receiver who msg  
-          set chosen-cops? true  
-          set shape "car"
-        ]
-      ]
-      send msg 
-      
-      ; Make sure this only happens once
-      set choose-cops? false
-      print (word who " the police-chief has chosen 10-20% of the police core and to send them a request-message ")
-    ]
     
-    while [not empty? incoming-queue] [
-      let cop-report get-message 
-      if get-performative cop-report = "report" [
-        let data get-content cop-report
-        
-        if member? "coordinates" data and member? "cluster" data [
-          let report-xcor item (position "coordinates" data + 1) data
-          let report-ycor item (position "coordinates" data + 2) data
-          set cluster-size item (position "cluster" data + 1) data
-          
-         ; update-town-square-matrix report-xcor report-ycor cluster-size
-          
-         
-          print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
-              
-          if cluster-size > 5 [
-            let ratio 500  ; 1 cop for every 500 demonstrators based on "antalet poliser per 100.000 invånare i Sverige (200,1)."
-            let required-cops ceiling (cluster-size / ratio)  ; round up
-                                                              ; available cops
-            let available-cops count turtles with [breed = cops and not chosen-cops? and not extra-cops?]
-            ; Determine the number of extra cops not more than available-cops
-            let extra-cops min (list required-cops available-cops)
-            
-            let msg create-message "stop-demonstration"
-            set msg add-content (list report-xcor report-ycor) msg
-            ask n-of extra-cops cops with [not chosen-cops?] [
-              set msg add-receiver who msg
-              set extra-cops? true
-            ]
-            send msg
-          ]
-        ]
-      ]
-    ]
-    
-        
-    ; Determine when to withdraw extra cops only
-    if cluster-size < 3 [
-      let msg create-message "retreat"
-      ask cops with [extra-cops?] [
-        set msg add-receiver who msg
-        set extra-cops? true
-      ]
-      send msg
-    ]
-  ]
-  
+
   ;################## REACTIVE BEHAVIOR ####################################
   ; subsumption hierarchy with highest priority in first if-sentence
   ; hiearchy of orders
@@ -179,6 +91,57 @@ to cop_behavior
  
   
 end 
+
+to handle_incoming_queue
+   let msg item 0 incoming-queue
+   ifelse empty? msg [print "No messages"] [
+    if get-performative msg = "stop-demonstration" []
+    if get-performative msg = "retrive" []
+    if get-performative msg = "patrol" [handle-patrol-message]
+    set incoming-queue remove-item 0 incoming-queue
+    let number-of-messages length incoming-queue
+    let i 1
+    while [i < number-of-messages] [
+      let message item i incoming-queue
+      set incoming-queue lput message incoming-queue
+    ]
+      set i i + 1
+   ]
+end
+
+
+to handle-patrol-message
+  let near-citizens count other citizens in-radius pvision
+  let distance-moved sqrt((xcor - last-xcord) ^ 2 + (ycor - last-ycord) ^ 2)
+
+  if near-citizens > 5 and distance-moved < min-distance [
+    let message-type "report"
+    let content (list "coordinates" xcor ycor "cluster" near-citizens)
+    
+    let receiver one-of cops with [is-chief] 
+    
+     send-chief-message  message-type content receiver
+     set last-xcord xcor  
+     set last-ycord ycor
+    
+    ]
+
+  patrolAround  
+end
+
+
+to send-chief-message [message-type content receiver]
+  
+  let message create-message message-type
+  set message add-content content message
+  set message add-receiver receiver message
+  
+  send message
+  print (word "received content: " content)
+  
+end
+
+
   
 
 to rule-of-law [suspect hunted]
