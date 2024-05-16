@@ -27,11 +27,8 @@ cops-own [
   cluster-size ; The demonstrators reported from the cop agents
   last-xcord
   last-ycord
+  coordinate
 ]
-
-
-
-
 
 
 
@@ -52,27 +49,25 @@ create-cops num-cops [
     set police-chief? false
     set colleagues []
     set choose-cops? true
+    set coordinate 00
   ]
-  
-
-  
+ 
   ; Choose one police chief
   ask one-of cops [
     set police-chief? true
     set shape "person police-chief"
-    
   ]
+  
   ask cops [
     ; Create a list of all the cop-agents (except itself)
     set colleagues other cops with [self != myself]
-  ]
-  
+  ] 
 end
 
 
+
 to cop_behavior
-  
-  
+   
   ;########## Updating the Beliefs, e.g. the agent's information about its environment ##############
   ;
   ; suspects = citizens nearby?
@@ -106,16 +101,29 @@ to cop_behavior
   ]
   
   handle_queue
-  
-  
-  
-  
-  ;set order "rule-of-law"
-  ;set order "arrest-troublemakers"
-  
-  if police-chief? [
-    
-    if choose-cops? [ 
+
+  if police-chief? [ cheif-behaviour ]
+     
+  ;################## REACTIVE BEHAVIOR ####################################
+  ; subsumption hierarchy with highest priority in first if-sentence
+  ; hiearchy of orders
+   
+  (ifelse 
+    order = "rule-of-law" [rule-of-law suspect hunted]
+    order = "stop-demonstration" [stop-demonstration suspect]
+    order = "retreat" [retreat]
+    order = "arrest-troublemakers" [
+      (ifelse 
+        suspect != nobody [arrest suspect]    
+        hunted != nobody [catch hunted]
+        true [patrolAround])]
+  )   
+end 
+
+
+
+to cheif-behaviour
+      if choose-cops? [ 
       ; Select 10-20% of cops randomly
       let percent 0.1 + random-float 0.1
       let num-to-choose round (percent * count cops)
@@ -171,9 +179,7 @@ to cop_behavior
           ]
         ]
       ]
-    ]
-    
-        
+    ]     
     ; Determine when to withdraw extra cops only
     if cluster-size < 3 [
       let msg create-message "retreat"
@@ -183,28 +189,11 @@ to cop_behavior
       ]
       send msg
     ]
-  ]
-  
-  ;################## REACTIVE BEHAVIOR ####################################
-  ; subsumption hierarchy with highest priority in first if-sentence
-  ; hiearchy of orders
- 
-   
-  (ifelse 
-    order = "rule-of-law" [rule-of-law suspect hunted]
-    order = "arrest-troublemakers" [
-      (ifelse 
-        suspect != nobody [arrest suspect]    
-        hunted != nobody [catch hunted]
-        true [patrolAround])]
-  ) 
- 
-  
-end 
-  
+end
+
+
 
 to rule-of-law [suspect hunted]
-
   if random 9 > 0 [set suspect nobody set hunted nobody]
 
   if hunted = last-hunted [set hunted nobody]
@@ -217,10 +206,13 @@ to rule-of-law [suspect hunted]
 end
  
 
-to patrolAround
+
+to patrolAround  
   let places neighborhood with [region = "empty" or region = "TownSquare"]
   if any? places [move-to one-of places]
 end
+
+
 
 to arrest [suspect]
   ; move the citizen to prison and mark them as arrested
@@ -231,6 +223,8 @@ to arrest [suspect]
         ]
 end
 
+
+
 to catch [hunted]
   if Debug [print (word " cop-agent: " who " tries to catch: " hunted)]
   face hunted 
@@ -239,6 +233,9 @@ to catch [hunted]
   let pplaces neighborhood with [region = "empty" or region = "TownSquare"]
   if any? pplaces [move-to one-of pplaces]
 end
+
+
+
 to update-town-square-matrix [x y nbr-of-citizens]
   let matrix-x 0
   let matrix-y 0
@@ -323,13 +320,14 @@ print (word "Cell of max citizens location: " max-location)
  print (word "Cell of highest decrease location: " max-decrease) 
   let map-coord-decrease matrix-cell-to-map-coordinates item 0 max-decrease item 1 max-decrease
   ;show  town-square-matrix
-  
- 
+   
   let total-percentage sum-all-percentages
  print (word "Total percentage: " total-percentage "%") 
   let total-citizens sum-all-citizens
    print (word "Total citizens: " total-citizens) 
 end
+
+
 
 ; Returns the index with the highest number in the matrix
 to-report find-max-citizens-location
@@ -337,14 +335,12 @@ to-report find-max-citizens-location
   let max-x 0
   let max-y 0
   
-
   foreach (range 0 4) [
     ?x ->
     foreach (range 0 4) [
       ?y ->
       let current-citizens matrix:get town-square-matrix ?x ?y
       
-
       ifelse current-citizens > max-citizens [
         set max-citizens current-citizens
         set max-x ?x
@@ -355,11 +351,14 @@ to-report find-max-citizens-location
     ]
   ]
   
-;  print (word "Cell with the highest number of citizens: " (list max-x max-y))
+  ;print (word "Cell with the highest number of citizens: " (list max-x max-y))
   
   ; Return the index with the most citizens
   report (list max-x max-y)
 end
+
+
+
 ; Returns coordinates to the place on town square by recieving a cell as input
 to-report matrix-cell-to-map-coordinates [matrix-x matrix-y]
   let map-x 0
@@ -372,6 +371,9 @@ to-report matrix-cell-to-map-coordinates [matrix-x matrix-y]
   report (list map-x map-y)
   show list map-x map-y
 end
+
+
+
 ; Cell with highest increase
 to-report find-highest-increase-location
   let max-percentage 0
@@ -395,17 +397,19 @@ to-report find-highest-increase-location
     ]
   ]
   
-;  print (word "Cell with the highest increase: " (list max-x max-y))
+  ;print (word "Cell with the highest increase: " (list max-x max-y))
   
   ; Return the index with the most citizens
   report (list max-x max-y)
 end
+
+
+
 ; Cell with highest decrease
 to-report find-highest-decrease-location
   let max-percentage 0
   let max-x 0
-  let max-y 0
-  
+  let max-y 0  
 
   foreach (range 0 4) [
     ?x ->
@@ -421,18 +425,17 @@ to-report find-highest-decrease-location
         ; Do nothing 
       ]
     ]
-  ]
-  
- ; print (word "Cell with the highest decrease: " (list max-x max-y))
-  
+  ]  
+  ;print (word "Cell with the highest decrease: " (list max-x max-y))  
   ; Return the index with the most citizens
   report (list max-x max-y)
 end
 
+
+
 ; Return the sum of all percentages
 to-report sum-all-percentages
-  let sum-percentages 0
-  
+  let sum-percentages 0  
  
   foreach (range 0 4) [
     ?x ->
@@ -441,11 +444,12 @@ to-report sum-all-percentages
       let current-percentage matrix:get percentage-matrix ?x ?y
       set sum-percentages sum-percentages + current-percentage
     ]
-  ]
-  
-  
+  ]  
   report sum-percentages
 end
+
+
+
  ; Return the sum of all citizens
 to-report sum-all-citizens
   let sum-citizens 0
@@ -458,9 +462,7 @@ to-report sum-all-citizens
       let current-citizens matrix:get town-square-matrix ?x ?y
       set sum-citizens sum-citizens + current-citizens
     ]
-  ]
-  
- 
+  ] 
   report sum-citizens 
 end
 
@@ -475,7 +477,6 @@ to reset-matrices
       matrix:set town-square-matrix ?x ?y 0
     ]
   ]
-
   ; Reset percentage-matrix
   foreach (range 0 4) [
     ?x ->
@@ -488,6 +489,8 @@ to reset-matrices
   show  town-square-matrix
   show  percentage-matrix
 end
+
+
 
 to handle_queue
   if not empty? incoming-queue [
@@ -543,5 +546,54 @@ to send-chief-message [message-type content receiver]
   send message
   print (word "received content: " content)
 
+end
+
+
+to handle_incoming_queue
+   let msg item 0 incoming-queue  
+   ifelse is-empty? msg [print "No messages"] [
+    if get-performative msg = "stop-demonstration" [handle-demonstration get-content msg]
+    if get-performative msg = "retreat" [set order "retreat"]
+    if get-performative msg = "patrol" []
+    set incoming-queue remove-item 0 incoming-queue
+   
+    let number-of-messages length incoming-queue
+    let i 1
+    while [i < number-of-messages] [
+      let message item i incoming-queue
+      set incoming-queue lput message incoming-queue
+    ]
+      set i i + 1
+   ]
+end
+
+
+
+to handle-demonstration [coo]
+  set coordinate coo
+  set order "stop-demonstration"
+end 
+
+
+
+to stop-demonstration [suspect]
+  face coordinate
+  forward cop-speed
+  if [region] of patch-here = "TownSquare"[
+  if suspect != nobody [arrest suspect] 
+  ]
+end
+
+
+
+to retreat 
+  face locPolStation
+  forward cop-speed
+end
+ 
+
+
+to-report is-empty? [value]
+  report value = false
 end
 
