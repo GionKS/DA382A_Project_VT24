@@ -25,11 +25,8 @@ cops-own [
   chosen-cops? ; The ones chosen to patrol Town square
   extra-cops? ; The remaining cops that gets sent to the Town square
   cluster-size ; The demonstrators reported from the cop agents
-<<<<<<< Updated upstream
-=======
   last-xcord
   last-ycord
->>>>>>> Stashed changes
 ]
 
 
@@ -87,8 +84,6 @@ to cop_behavior
   ;set destinationxy one-of patches with [region = "Restaurant"]
   if copSource = "rule-of-law" [
     set order "rule-of-law"
-<<<<<<< Updated upstream
-=======
     if [region] of patch-here = "TownSquare" [
     let nbr-of-citizens count citizens in-radius 3
   let xcor-here pxcor
@@ -96,20 +91,16 @@ to cop_behavior
 
   update-town-square-matrix xcor-here ycor-here nbr-of-citizens
   ]
->>>>>>> Stashed changes
   ] 
   if copSource = "arrest-troublemakers"
   [
     set order "arrest-troublemakers"
-<<<<<<< Updated upstream
-=======
       if [region] of patch-here = "TownSquare" [
     let nbr-of-citizens count citizens in-radius 3
   let xcor-here pxcor
   let ycor-here pycor
 
   update-town-square-matrix xcor-here ycor-here nbr-of-citizens
->>>>>>> Stashed changes
     
   ]
   ]
@@ -248,8 +239,6 @@ to catch [hunted]
   let pplaces neighborhood with [region = "empty" or region = "TownSquare"]
   if any? pplaces [move-to one-of pplaces]
 end
-<<<<<<< Updated upstream
-=======
 to update-town-square-matrix [x y nbr-of-citizens]
   let matrix-x 0
   let matrix-y 0
@@ -555,5 +544,4 @@ to send-chief-message [message-type content receiver]
   print (word "received content: " content)
 
 end
->>>>>>> Stashed changes
 

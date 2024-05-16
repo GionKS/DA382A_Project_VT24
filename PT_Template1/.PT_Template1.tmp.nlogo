@@ -23,6 +23,7 @@ __includes [
 
 ; ************ EXTENSIONS *****************
 extensions [
+
  vid bitmap; used for recording of the simulation
 ]
 ; ********************end extensions ********
@@ -123,7 +124,6 @@ to setup
   ; setup cops
   setup-cops
 
-
   ; time section
   initTime ; initialize the time and clock variables
 
@@ -179,7 +179,6 @@ to go
       ]
     if (breed = cops) [
       cop_behavior ; code as defined in the include-file "cops.nls"
-      if ticks = 1 [test-message]
       ]
 
   ]
@@ -250,7 +249,7 @@ num-citizens
 num-citizens
 1
 150
-150.0
+21.0
 1
 1
 NIL
@@ -299,7 +298,7 @@ num-cops
 num-cops
 0
 150
-46.0
+9.0
 1
 1
 NIL
@@ -314,7 +313,7 @@ citizen-vision
 citizen-vision
 1
 10
-1.9
+3.0
 0.1
 1
 NIL
@@ -329,7 +328,7 @@ cop-vision
 cop-vision
 1
 100
-100.0
+9.0
 0.1
 1
 NIL
@@ -509,7 +508,7 @@ CHOOSER
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
-0
+1
 
 MONITOR
 221
