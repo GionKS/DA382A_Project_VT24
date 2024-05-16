@@ -23,6 +23,7 @@ __includes [
 
 ; ************ EXTENSIONS *****************
 extensions [
+   matrix
  vid bitmap; used for recording of the simulation
 ]
 ; ********************end extensions ********
@@ -35,6 +36,9 @@ breed [cops cop] ;
 
 globals [
   ;
+  town-square-matrix
+  percentage-matrix
+
   ; Global variables used by the citizen agents to adapt their local variables
   L;------------------------current global government legitimacy
   newArrests;---------------number of newly arrested citizens during the time interval
@@ -43,12 +47,12 @@ globals [
   nArrests;-----------------Total number of currently arrested citizens
   Jmax;---------------------Maximum jail term that a citizen can be sentenced to
 
+  demonstrator-matrix
 
   ; Global variables for the Observer to monitor the dynamics and the result of the simulation
   max-jailterm
   numPrisoners ; Number of prisoners
 
-  min-distance
 
   ;----- Time variables
   ; we might instead want to make use of the time extension, see https://ccl.northwestern.edu/netlogo/docs/time.html
@@ -111,8 +115,8 @@ to setup
   set numFreeCitizens 0
   set numPrisoners 0
   set newarrest 0
-  set min-distance 5
-
+  set town-square-matrix matrix:make-constant 4 4 0
+  set percentage-matrix matrix:make-constant 4 4 0
   ; setup of the environment:
   setup-environment ;
   ; setup of all patches
@@ -123,8 +127,14 @@ to setup
   ; setup cops
   setup-cops
 
+
   ; time section
   initTime ; initialize the time and clock variables
+
+
+
+
+
 
   ; must be last in the setup-part:
   reset-ticks
@@ -192,7 +202,8 @@ to go
     if Source = "Only View" [vid:record-view] ; records the plane
     if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
-
+;Reset matrices every 100 ticks
+every 100 [reset-matrices]
 end ; - to go part
 
 
