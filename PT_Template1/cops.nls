@@ -126,7 +126,7 @@ to cop_behavior
           let report-ycor item (position "coordinates" data + 2) data
           set cluster-size item (position "cluster" data + 1) data
           
-          update-town-square-matrix report-xcor report-ycor cluster-size
+         ; update-town-square-matrix report-xcor report-ycor cluster-size
           
          
           print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
@@ -142,7 +142,7 @@ to cop_behavior
             let msg create-message "stop-demonstration"
             set msg add-content (list report-xcor report-ycor) msg
             ask n-of extra-cops cops with [not chosen-cops?] [
-              set msg add-reciver who msg
+              set msg add-receiver who msg
               set extra-cops? true
             ]
             send msg
@@ -154,12 +154,13 @@ to cop_behavior
         
     ; Determine when to withdraw extra cops only
     if cluster-size < 3 [
-            let msg create-message "retreat"
-            ask n-of extra-cops cops with [extra-cops?] [
-              set msg add-reciver who msg
-              set extra-cops? true
-            ]
-            send msg
+      let msg create-message "retreat"
+      ask cops with [extra-cops?] [
+        set msg add-receiver who msg
+        set extra-cops? true
+      ]
+      send msg
+    ]
   ]
   
   ;################## REACTIVE BEHAVIOR ####################################
