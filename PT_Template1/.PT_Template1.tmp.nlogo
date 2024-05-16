@@ -90,6 +90,7 @@ turtles-own [
   beliefs
   intentions
   incoming-queue
+  demo-time
 ]
 
 ;---- Specific, local variables of patches
