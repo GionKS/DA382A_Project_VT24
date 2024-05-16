@@ -81,6 +81,8 @@ citizens-own [
   onceOnWeekend;------Flag to set for once per weekend
   want2beHome;--------Flag to indicate preference to stay at home
   
+  willToDemonstrate ;--------flag demonstrating the amount of citizens willing to demonstrate
+  
 ]
 
 
@@ -152,6 +154,12 @@ to setup-citizens
     set speechDuration []
     set onceOnWeekend true
     set want2beHome true
+    set willToDemonstrate 0
+    
+;    ; test for demonstration state
+;    set anger random 10 + 4
+;    set vFrust random 10 + 4
+;    set fear random 10 + 4
     
   ]
   ;once the citizens are created, they can add friends
@@ -363,6 +371,7 @@ to proactiveBehavior
   ;
   ;
   ;------------------ Behavior during Weekdays -------------------------------------------------
+  
 
 
   
@@ -468,17 +477,79 @@ if vFrust <= thrFrust [
   ;] ; end of weekend
   
   
-  ; section when anger and fear get very high
-  ; preconditions for demonstration
-  if (anger > thrAnger) and (proState = []) and onceOnWeekend [
-    (ifelse
-      anger >= fear [set proState "Demonstration"]
-      anger < fear [set proState "Resignation"]
-    )
-      set onceOnWeekend false
-  ]
+;  ; section when anger and fear get very high
+;  ; preconditions for demonstration
+;  if (anger > thrAnger) and (proState = []) and onceOnWeekend [
+;    (ifelse
+;      anger >= fear [set proState "Demonstration"]
+;      anger < fear [set proState "Resignation"]
+;    )
+;      set onceOnWeekend false
+;  ]
+;    
+;  ] ; end of weekend
     
-  ] ; end of weekend
+    
+if (proState = []) and onceOnWeekend [
+  ; print the values of anger, fear, and vFrust
+  print (word "Citizen " who ": anger=" anger ", fear=" fear ", vFrust=" vFrust)
+
+  ; report values to the global hash table
+  addToHashTable (word who) "anger" (word anger)
+  addToHashTable (word who) "fear" (word fear)
+  addToHashTable (word who) "frustration" (word vFrust)
+
+  ; compare average values from the global hash table with own values
+  let anger_average getAverage "anger"
+  let fear_average getAverage "fear"
+  let frustration_average getAverage "frustration"
+
+  ; print the average values
+  print (word "Averages: anger=" anger_average ", fear=" fear_average ", frustration=" frustration_average)
+
+  ifelse (anger > anger_average) and (vFrust > frustration_average) [
+    set proState "Demonstration"
+    set willToDemonstrate 1
+    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
+    print (word "Citizen " who " wants to demonstrate")
+  ][
+    set proState "Resignation"
+    set willToDemonstrate 0
+    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
+    print (word "Citizen " who " has resigned")
+  ]
+
+  set onceOnWeekend false
+]
+
+] ; end of weekend
+  
+  
+;  ;------------- Task 8B --------------
+;  
+;  ; report values to the global hash table
+;  addToHashTable (word who) "anger" (word anger)
+;  addToHashTable (word who) "fear" (word fear)
+;  addToHashTable (word who) "frustration" (word vFrust)
+;  
+;  ; compare average values from the global hash table with own values
+;  let anger_average getAverage "anger"
+;  let fear_average getAverage "fear"
+;  let frustration_average getAverage "frustration"
+;  
+;  ifelse (anger > anger_average) and (vFrust > frustration_average) [
+;    set proState "Demonstration"
+;    set willToDemonstrate 1
+;    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
+;  ][
+;    set proState "Resignation"
+;    set willToDemonstrate 0
+;    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
+;  ]
+;  
+;  ;-----------------------------
+  
+ 
   
   ; For testing
   if Debug [print (word who "deliberated proState = " proState)]
@@ -726,9 +797,28 @@ end
 
 to demonstrate
   if Debug [print (word who " is in the proactive state Demonstration")]
+  
+  ; check global willingness to demonstrate
+  let totalWillToDemonstrate getTotal "willToDemonstrate"
+  let numCitizens count citizens
+  
   ifelse (not initialCondition) [
-    print (word who " wants to demonstrate")
-    set initialCondition true]
+    if totalWillToDemonstrate > (numCitizens * 0.1) [
+      print (word who " wants to demonstrate")
+      set initialCondition true
+      
+      ; go to town square
+      if region != "TownSquare" [
+        let targetPatch one-of patches with [region = "TownSquare"]
+        set destinationxy targetPatch
+        moveToDestxy
+      ]
+      
+      if region = "TownSquare" [
+        set color red
+      ]
+    ]
+  ]
   [
     decrease-anger
     set proState []

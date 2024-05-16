@@ -3,7 +3,7 @@
 ;
 ; See the description in the file README on GitHub on how to work with the project files
 ;
-;
+; test fatima
 ;
 
 
@@ -18,12 +18,14 @@ __includes [
     "communication.nls"; contains the extension for FIPA-like communication protocols
     "time_library.nls"; code for the time extension library
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+    "HashTable.nls"
 ]
 ; ********************end included files ********
 
 ; ************ EXTENSIONS *****************
 extensions [
  vid bitmap; used for recording of the simulation
+ table
 ]
 ; ********************end extensions ********
 
@@ -77,6 +79,15 @@ globals [
   locRestaurant; location of the restaurant
   locSocialEvents; location of the volunteer place
   numFreeCitizens
+
+    ;-------HASH TABLE-------
+  hashTable
+  average-frustration
+  average-anger
+  average-fear
+  number-ready-to-demonstrate
+  willingness-to-demonstrate
+  decision-to-demonstrate
 
 ]
 
@@ -132,6 +143,9 @@ to setup
   initTime ; initialize the time and clock variables
   set weeklyFlag false
   set dailyFlag false
+
+  setupHashTable
+  print hashtable
 
 
 
@@ -227,6 +241,8 @@ to go
     if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
 
+  ;print table:get hashTable "numToDemonstrate"
+
 end ; - to go part
 
 
@@ -244,6 +260,15 @@ end
 to count-new-arrests
   let new-arrest (citizens with [(color = red) and inPrison?])
   set newarrest count new-arrest
+end
+
+to setupHashTable
+  set hashTable table:make
+  table:put hashTable "fear"  table:make
+  table:put hashTable "anger" table:make
+  table:put hashTable "frustration" table:make
+  table:put hashTable "numToDemonstrate" table:make
+  table:put hashTable "willToDemonstrate" table:make
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -629,6 +654,23 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot avrAnger"
+
+BUTTON
+516
+201
+597
+234
+NIL
+printHash
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
