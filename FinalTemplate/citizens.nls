@@ -133,7 +133,7 @@ to setup-citizens
     set minCinema ((random 2)  + 1) / 10
     set vCinema minCinema
     set thrCinema ((random 5) + 5) / 10
-    set vFrust 0
+    ;set vFrust 0
     set thrFrust ((random 4) + 6) / 10
     ;set alfaFrust -2.3
     set alfaFrust -1.0
@@ -141,7 +141,7 @@ to setup-citizens
     set proState []
     set deliberationFlag true
     ; update anger
-    set anger 0
+    ;set anger 0
     set anger_h 0.1
     set anger_d 0.1
     set thrAnger ((random 2) + 7) / 10
@@ -157,9 +157,9 @@ to setup-citizens
     set willToDemonstrate 0
     
 ;    ; test for demonstration state
-;    set anger random 10 + 4
-;    set vFrust random 10 + 4
-;    set fear random 10 + 4
+    set anger random 10 + 4
+    set vFrust random 10 + 4
+  
     
   ]
   ;once the citizens are created, they can add friends
@@ -218,6 +218,7 @@ ifelse (region != "empty" and region != "TownSquare") [set safespot true][set sa
 
 ;--- update the local values for pArrest, risk, fear, etc
 set pArrest 1 - exp((- k * C) / (A + 1))  ; probability of being arrested, updated here
+  
 
   
 ;---------------------------------- Update once a day -----------------------------------------------------
@@ -242,6 +243,7 @@ if dailyFlag [
     
     set deliberationFlag true ; restrict proactive behavior to one intention per evening during weekdays
     set want2beHome true; makes sure the citizen is home to read the mails
+
     
     ;print "daily update of needs: "
     print ( word who ": vWalk = " vWalk ", thrWalk= " thrWalk ", vMeet = " vMeet ", thrMeet= " thrMeet ", vRest= " vRest ", thrRest= " thrRest ", vCinema= " vCinema ", thrCinema = " thrCinema ", vFrust= " vFrust ", thrFrust= " thrFrust ", fear= " fear ", anger= " anger ", thrAnger=" thrAnger)
@@ -474,27 +476,12 @@ if vFrust <= thrFrust [
       
       ]
   
-  ;] ; end of weekend
-  
-  
-;  ; section when anger and fear get very high
-;  ; preconditions for demonstration
-;  if (anger > thrAnger) and (proState = []) and onceOnWeekend [
-;    (ifelse
-;      anger >= fear [set proState "Demonstration"]
-;      anger < fear [set proState "Resignation"]
-;    )
-;      set onceOnWeekend false
-;  ]
-;    
-;  ] ; end of weekend
-    
     
 if (proState = []) and onceOnWeekend [
   ; print the values of anger, fear, and vFrust
   print (word "Citizen " who ": anger=" anger ", fear=" fear ", vFrust=" vFrust)
 
-  ; report values to the global hash table
+;  ; report values to the global hash table
   addToHashTable (word who) "anger" (word anger)
   addToHashTable (word who) "fear" (word fear)
   addToHashTable (word who) "frustration" (word vFrust)
@@ -524,33 +511,7 @@ if (proState = []) and onceOnWeekend [
 
 ] ; end of weekend
   
-  
-;  ;------------- Task 8B --------------
-;  
-;  ; report values to the global hash table
-;  addToHashTable (word who) "anger" (word anger)
-;  addToHashTable (word who) "fear" (word fear)
-;  addToHashTable (word who) "frustration" (word vFrust)
-;  
-;  ; compare average values from the global hash table with own values
-;  let anger_average getAverage "anger"
-;  let fear_average getAverage "fear"
-;  let frustration_average getAverage "frustration"
-;  
-;  ifelse (anger > anger_average) and (vFrust > frustration_average) [
-;    set proState "Demonstration"
-;    set willToDemonstrate 1
-;    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
-;  ][
-;    set proState "Resignation"
-;    set willToDemonstrate 0
-;    addToHashTable (word who) "willToDemonstrate" (word willToDemonstrate)
-;  ]
-;  
-;  ;-----------------------------
-  
  
-  
   ; For testing
   if Debug [print (word who "deliberated proState = " proState)]
   
@@ -803,7 +764,7 @@ to demonstrate
   let numCitizens count citizens
   
   ifelse (not initialCondition) [
-    if totalWillToDemonstrate > (numCitizens * 0.1) [
+    if totalWillToDemonstrate > (numCitizens * 0.01) [
       print (word who " wants to demonstrate")
       set initialCondition true
       

@@ -4,7 +4,7 @@
 ; See the description in the file README on GitHub on how to work with the project files
 ;
 ;
-
+;
 
 
 
@@ -143,9 +143,10 @@ to setup
   set weeklyFlag false
   set dailyFlag false
 
+  ; setup hash table
   setupHashTable
   print hashtable
-setupHashTable
+
 
 
 

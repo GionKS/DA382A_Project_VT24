@@ -73,7 +73,7 @@ to printHash
   print (word "ANGER: " table:get hashTable "anger")
   print (word "FEAR: " table:get hashTable "fear")
   print (word "FRUSTRATION: " table:get hashTable "frustration")
-  print (word "WILLTODEMONSTATE: " table:get hashTable "willToDemonstrate")
+  print (word "WILL TO DEMONSTRATE: " table:get hashTable "willToDemonstrate")
   
 end
 ;======================================================================
