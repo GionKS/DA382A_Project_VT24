@@ -3,7 +3,6 @@
 ;
 ; See the description in the file README on GitHub on how to work with the project files
 ;
-; test fatima
 ;
 
 
@@ -144,6 +143,7 @@ to setup
   set weeklyFlag false
   set dailyFlag false
 
+  ; setup hash table
   setupHashTable
   print hashtable
 
@@ -566,7 +566,7 @@ CHOOSER
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
-0
+1
 
 MONITOR
 120

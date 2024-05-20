@@ -3,7 +3,6 @@
 ;
 ; See the description in the file README on GitHub on how to work with the project files
 ;
-; test fatima
 ;
 
 
@@ -146,7 +145,7 @@ to setup
 
   setupHashTable
   print hashtable
-
+setupHashTable
 
 
 
@@ -566,7 +565,7 @@ CHOOSER
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
-0
+1
 
 MONITOR
 120
