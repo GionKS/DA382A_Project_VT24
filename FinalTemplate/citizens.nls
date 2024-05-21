@@ -133,7 +133,7 @@ to setup-citizens
     set minCinema ((random 2)  + 1) / 10
     set vCinema minCinema
     set thrCinema ((random 5) + 5) / 10
-    ;set vFrust 0
+    set vFrust 0
     set thrFrust ((random 4) + 6) / 10
     ;set alfaFrust -2.3
     set alfaFrust -1.0
@@ -141,7 +141,7 @@ to setup-citizens
     set proState []
     set deliberationFlag true
     ; update anger
-    ;set anger 0
+    set anger 0
     set anger_h 0.1
     set anger_d 0.1
     set thrAnger ((random 2) + 7) / 10
@@ -156,9 +156,9 @@ to setup-citizens
     set want2beHome true
     set willToDemonstrate 0
     
-;    ; test for demonstration state
-    set anger random 10 + 4
-    set vFrust random 10 + 4
+;;    ; test for demonstration state
+;    set anger random 10 + 4
+;    set vFrust random 10 + 4
   
     
   ]
