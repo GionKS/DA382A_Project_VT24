@@ -9,7 +9,7 @@ extensions [time]
 ;=======================================================================================================================================
 ;INITIALIZATION OF TIME.
 to initTime
-  set start-time (time:create "2024/04/22 08:00:00") ;starting at a Monday morning
+  set start-time (time:create "2024/04/26 13:00:00") ;starting at a Monday morning
   set current-time time:anchor-to-ticks start-time 1 "minute"
   set time-passed 0
 end

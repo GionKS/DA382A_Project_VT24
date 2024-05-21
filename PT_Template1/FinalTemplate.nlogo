@@ -362,7 +362,7 @@ num-cops
 num-cops
 0
 150
-12.0
+58.0
 1
 1
 NIL

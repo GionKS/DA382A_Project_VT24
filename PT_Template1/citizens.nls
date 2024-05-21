@@ -156,9 +156,9 @@ to setup-citizens
     set want2beHome true
     set willToDemonstrate 0
     
-;;    ; test for demonstration state
-;    set anger random 10 + 4
-;    set vFrust random 10 + 4
+;  ; test for demonstration state
+    set anger random 10 + 4
+    set vFrust random 10 + 4
   
     
   ]

@@ -50,6 +50,7 @@ create-cops num-cops [
     set colleagues []
     set choose-cops? true
     set extra-cops? false
+    set chosen-cops? false
     set coordinate 00
   ]
  
@@ -87,13 +88,14 @@ to cop_behavior
    
   (ifelse 
     order = "rule-of-law" [rule-of-law suspect hunted]
-    order = "stop-demonstration" [stop-demonstration suspect]
+    order = "stop-demonstration" [stop-demonstration suspect
+    print ("SSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOPPPPPPPPPPPPPPPPPPPPPPPPPPP")]
     order = "retreat" [retreat]
     order = "arrest-troublemakers" [
       (ifelse 
         suspect != nobody [arrest suspect]    
         hunted != nobody [catch hunted]
-        true [let places neighborhood with [region = "empty" or region = "TownSquare"]
+        true [let places neighborhood with [region = "TownSquare"]
           if any? places [move-to one-of places]
         ]
         )
@@ -104,45 +106,63 @@ end
 
 
 to cheif-behaviour
-      if choose-cops? [ 
-      ; Select 10-20% of cops randomly
-      let percent 0.1 + random-float 0.1
-      let num-to-choose round (percent * count cops)
-      let selected-cops-list sort n-of num-to-choose cops
-      
-      ; For each selected cop create and send a message
-      let msg create-message "patrol"
-      set msg add-content "Patrol Town Square" msg 
-      foreach selected-cops-list [this-cop ->
-        ask this-cop [
-          set msg add-receiver who msg  
-          set chosen-cops? true  
-        ]
-      ]
-      send msg 
-      
-      ; Make sure this only happens once
-      set choose-cops? false
-      print (word who " the police-chief has chosen 10-20% of the police core and to send them a request-message ")
-    ]
+  if choose-cops? [ 
+    ; Select 10-20% of cops randomly
+    let percent 0.1 + random-float 0.1
+    let num-to-choose round (percent * count cops)
+    let selected-cops-list sort n-of num-to-choose cops
     
+    ; For each selected cop create and send a message
+    let msg create-message "patrol"
+    set msg add-content "Patrol Town Square" msg 
+    foreach selected-cops-list [this-cop ->
+      ask this-cop [
+        set msg add-receiver who msg  
+        set chosen-cops? true
+        move-to locTownSquare
+      ]
+    ]
+    send msg 
+    
+    ; Make sure this only happens once
+    set choose-cops? false
+    ;  print (word who " the police-chief has chosen 10-20% of the police core and to send them a request-message ")
+  ]
+  
+  
+  ; Determine when to withdraw extra cops only
+  if cluster-size < 3 [
+    let msg create-message "retreat"
+    ask cops with [extra-cops?] [
+      set msg add-receiver who msg
+      set extra-cops? true
+    ]
+    send msg
+  ]
+end
+
+
+
+to chief-message-handle 
+  ;print(word "Chief check queue")
     while [not empty? incoming-queue] [
       let cop-report get-message 
       if get-performative cop-report = "report" [
         let data get-content cop-report
+        print (word "received content GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG: " data)
         
-        if member? "coordinates" data and member? "cluster" data [
+        if member? "coordinates" data [
           let report-xcor item (position "coordinates" data + 1) data
           let report-ycor item (position "coordinates" data + 2) data
-          set cluster-size item (position "cluster" data + 1) data
+          set cluster-size item (position "coordinates" data + 3) data
           
           update-town-square-matrix report-xcor report-ycor cluster-size
           
          
-          print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
+          ;print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
               
-          if cluster-size > 5 [
-            let ratio 500  ; 1 cop for every 500 demonstrators based on "antalet poliser per 100.000 invånare i Sverige (200,1)."
+          if cluster-size > 1 [
+            let ratio 2  ; 1 cop for every 500 demonstrators based on "antalet poliser per 100.000 invånare i Sverige (200,1)."
             let required-cops ceiling (cluster-size / ratio)  ; round up
                                                               ; available cops
             let available-cops count turtles with [breed = cops and not chosen-cops? and not extra-cops?]
@@ -159,19 +179,8 @@ to cheif-behaviour
           ]
         ]
       ]
-    ]     
-    ; Determine when to withdraw extra cops only
-    if cluster-size < 3 [
-      let msg create-message "retreat"
-      ask cops with [extra-cops?] [
-        set msg add-receiver who msg
-        set extra-cops? true
-      ]
-      send msg
-    ]
+  ]  ;print(word "queue is empty")
 end
-
-
 
 to rule-of-law [suspect hunted]
   handle-patrol-message
@@ -193,7 +202,7 @@ end
 
 to arrest [suspect]
   ; move the citizen to prison and mark them as arrested
-  if Debug [print (word " cop-agent: " who " puts suspect: " suspect " to prison!")]
+ ; if Debug [print (word " cop-agent: " who " puts suspect: " suspect " to prison!")]
   ask suspect [
            set jailsentence random max-jailterm
            gotoprison
@@ -203,7 +212,7 @@ end
 
 
 to catch [hunted]
-  if Debug [print (word " cop-agent: " who " tries to catch: " hunted)]
+ ; if Debug [print (word " cop-agent: " who " tries to catch: " hunted)]
   face hunted 
   forward cop-speed
   ; only allow police to be in empty regions or in TownSquare
@@ -249,16 +258,16 @@ to update-town-square-matrix [x y nbr-of-citizens]
      let increase-percentage 100
     matrix:set town-square-matrix matrix-x matrix-y nbr-of-citizens
     matrix:set percentage-matrix matrix-x matrix-y increase-percentage
-    show (word "Demonstrators spotted: " nbr-of-citizens ", Increase: " increase-percentage "%" )
+  ;  show (word "Demonstrators spotted: " nbr-of-citizens ", Increase: " increase-percentage "%" )
     
         let max-location find-max-citizens-location
-print (word "Cell of max citizens location: " max-location)
+;print (word "Cell of max citizens location: " max-location)
     let map-coordinates matrix-cell-to-map-coordinates item 0 max-location item 1 max-location
-  print (word "Coordinates of max citizens location on map: " map-coordinates)
-    print("Nbr of citizens Matrix")
-    show  town-square-matrix
-    print ("Percentage Matrix")
-     show  percentage-matrix
+ ; print (word "Coordinates of max citizens location on map: " map-coordinates)
+  ;  print("Nbr of citizens Matrix")
+   ; show  town-square-matrix
+    ;print ("Percentage Matrix")
+     ;show  percentage-matrix
       
     ;För test av koordinater
   ;  ask cops [ 
@@ -271,37 +280,37 @@ print (word "Cell of max citizens location: " max-location)
 
     matrix:set town-square-matrix matrix-x matrix-y nbr-of-citizens
     matrix:set percentage-matrix matrix-x matrix-y increase-percentage
-    show (word "Demonstrators spotted: " nbr-of-citizens ", Increase percentage: " increase-percentage "%")
+    ;show (word "Demonstrators spotted: " nbr-of-citizens ", Increase percentage: " increase-percentage "%")
    
      let max-location find-max-citizens-location
-print (word "Cell of max citizens location: " max-location)
+;print (word "Cell of max citizens location: " max-location)
     let map-coordinates matrix-cell-to-map-coordinates item 0 max-location item 1 max-location
-  print (word "Coordinates of max citizens location on map: " map-coordinates)
-     print("Nbr of citizens Matrix")
-    show  town-square-matrix
-    print("Percentage Matrix")
-     show percentage-matrix
+ ; print (word "Coordinates of max citizens location on map: " map-coordinates)
+  ;   print("Nbr of citizens Matrix")
+   ; show  town-square-matrix
+    ;print("Percentage Matrix")
+     ;show percentage-matrix
   ]
   
   let max-location find-max-citizens-location
-  print (word "Cell of max citizens location: " max-location)  
+  ;print (word "Cell of max citizens location: " max-location)  
   let map-coordinates matrix-cell-to-map-coordinates item 0 max-location item 1 max-location
-  print (word "Coordinates of max citizens location on map: " map-coordinates)
+  ;print (word "Coordinates of max citizens location on map: " map-coordinates)
     
   let max-increase find-highest-increase-location
-  print (word "Cell of highest increase location: " max-increase) 
+  ;print (word "Cell of highest increase location: " max-increase) 
   let map-coord-increase matrix-cell-to-map-coordinates item 0 max-increase item 1 max-increase
-  print (word "Coordinates of highest increase on map: " map-coord-increase)
+  ;print (word "Coordinates of highest increase on map: " map-coord-increase)
  
   let max-decrease find-highest-decrease-location
- print (word "Cell of highest decrease location: " max-decrease) 
+ ;print (word "Cell of highest decrease location: " max-decrease) 
   let map-coord-decrease matrix-cell-to-map-coordinates item 0 max-decrease item 1 max-decrease
   ;show  town-square-matrix
    
   let total-percentage sum-all-percentages
- print (word "Total percentage: " total-percentage "%") 
+; print (word "Total percentage: " total-percentage "%") 
   let total-citizens sum-all-citizens
-   print (word "Total citizens: " total-citizens) 
+ ;  print (word "Total citizens: " total-citizens) 
 end
 
 
@@ -462,7 +471,7 @@ to reset-matrices
       matrix:set percentage-matrix ?x ?y 0
     ]
   ]
-  print("Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset")
+  ;print("Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset-Reset")
   show  town-square-matrix
   show  percentage-matrix
 end
@@ -472,11 +481,13 @@ end
 to handle_queue
   ifelse not empty? incoming-queue [
     let msg item 0 incoming-queue
-    print (word " message ADDEDDADDEEDDDAADDDEEDDAAAA to cop " who "'s queue")
-    if get-performative msg = "stop-demonstration" [handle-demonstration get-content msg]
+    if get-performative msg = "stop-demonstration" [handle-demonstration get-content msg
+    print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")]
     if get-performative msg = "retreat" [set order "retreat"]
     if get-performative msg = "patrol" [set order "rule-of-law"]
-    set incoming-queue remove-item 0 incoming-queue
+    if get-performative msg = "report" [chief-message-handle]
+    
+  ;  set incoming-queue remove-item 0 incoming-queue
     
     let number-of-messages length incoming-queue
     let i 1
@@ -496,9 +507,10 @@ to handle-patrol-message
   let near-citizens count other citizens in-radius pvision
   let distance-moved sqrt((xcor - last-xcord) ^ 2 + (ycor - last-ycord) ^ 2)
 
-  if near-citizens >= 5  [
+  if near-citizens >= 1  [
+    ;print (word "Patrolling cops see citizens")
     let message-type "report"
-    let content (list "coordinates" xcor ycor "cluster" near-citizens)
+    let content (list "coordinates" xcor ycor near-citizens)
 
     let receiver one-of cops with [police-chief?] 
  
@@ -511,15 +523,16 @@ end
 
 
 to send-chief-message [message-type content receiver]
-
+  
+  print (word "Sending a message to chief AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
   let message create-message message-type
   set message add-content content message
-  set message add-receiver receiver message
+  set message add-receiver [who] of receiver message  ;; Ensure the receiver ID is correctly set
 
   send message
-  print (word "received content: " content)
-
+  ;print (word "sent content to chief: " content)
 end
+
 
 
 
@@ -531,6 +544,7 @@ end
 
 
 to stop-demonstration [suspect]
+  print "hafuefhsjeahgiseoghniursghuirsngirs"
   face coordinate
   forward cop-speed
   if [region] of patch-here = "TownSquare"[
