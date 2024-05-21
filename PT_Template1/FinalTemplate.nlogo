@@ -4,7 +4,6 @@
 ; See the description in the file README on GitHub on how to work with the project files
 ;
 ;
-;
 
 
 
@@ -18,6 +17,7 @@ __includes [
     "communication.nls"; contains the extension for FIPA-like communication protocols
     "time_library.nls"; code for the time extension library
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+    "HashTable.nls"
 ]
 ; ********************end included files ********
 
@@ -25,6 +25,7 @@ __includes [
 extensions [
    matrix
  vid bitmap; used for recording of the simulation
+ table
 ]
 ; ********************end extensions ********
 
@@ -41,7 +42,9 @@ globals [
 
   ; Global variables used by the citizen agents to adapt their local variables
   L;------------------------current global government legitimacy
-  newArrests;---------------number of newly arrested citizens during the time interval
+  L0;----------------------initial global government legitimacy
+  newArrest;---------------number of newly arrested citizens during the time interval
+  oldArrest;----------------saved value of total arrests
   alfa;---------------------constant factor that determines how fast arresting episodes are forgotten
   glbFear;------------------value for the collective global fear amongst citizen agents
   nArrests;-----------------Total number of currently arrested citizens
@@ -52,23 +55,20 @@ globals [
   ; Global variables for the Observer to monitor the dynamics and the result of the simulation
   max-jailterm
   numPrisoners ; Number of prisoners
+  avrFear;-----------------Value of average fear
+  avrFrust;----------------Value of average frustration
+  avrAnger;----------------Value of average anger
 
 
-  ;----- Time variables
-  ; we might instead want to make use of the time extension, see https://ccl.northwestern.edu/netlogo/docs/time.html
-  time; One tick represents x minutes, time contains the sum of minutes for a day
-  flagMorning ; true if it is morning, e.g. time to get up
-  flagAfternoon;
-  flagEvening ; true if it is evening
-  flagWeekend ; true if it is a weekend (2-days, Saturday and Sunday)
-  tick-datetime
-  sim-time               ; The current simulation time
-  sim-start-time
-  start-time
-  time-simulated   ; Text string showing how much time has been simulated, with the units specified on the Interface
-  sim-start-logotime
-
+  ;----- Time variables, using the time extension, see https://ccl.northwestern.edu/netlogo/docs/time.html
+  current-time             ;THE CURRENT TIME IN THE SIMULATION
+  start-time               ;START TIME OF THE SIMULATION
+  time-passed              ;TEXT STRING SHOWING HOW MUCH TIME HAS BEEN SIMULATED
+  ; we might instead want to make use of the
   timeTaker-stop-time
+
+  weeklyFlag
+  dailyFlag
 
 
 
@@ -83,7 +83,15 @@ globals [
   locRestaurant; location of the restaurant
   locSocialEvents; location of the volunteer place
   numFreeCitizens
-  newarrest
+
+    ;-------HASH TABLE-------
+  hashTable
+  average-frustration
+  average-anger
+  average-fear
+  number-ready-to-demonstrate
+  willingness-to-demonstrate
+  decision-to-demonstrate
 
 ]
 
@@ -109,7 +117,15 @@ patches-own [
 to setup
   clear-all
   ; define global variables that are not set as sliders
-  set max-jailterm 10
+  set max-jailterm 10 ;days?
+  ;Legitimacy
+  set L0 ((random 3) + 5) / 10
+  set alfa -0.8
+  set L L0
+  ; average global values
+  set avrFear 0
+  set avrFrust 0
+  set avrAnger 0
 
   ; initialize general global variables (could also be moved to setup-environment)
   set numFreeCitizens 0
@@ -130,6 +146,12 @@ to setup
 
   ; time section
   initTime ; initialize the time and clock variables
+  set weeklyFlag false
+  set dailyFlag false
+
+  ; setup hash table
+  setupHashTable
+  print hashtable
 
 
 
@@ -157,25 +179,45 @@ to go
   ;---- Time updates
   ;
   tick ;- update time
-  update-time-flags ;- update time
 
-  ;UPDATES THE VALUE OF TIME-SIMULATED FOR DISPLAY PURPOSE
-  set time-simulated (word (time:difference-between sim-start-time sim-time "minute") " minutes")
-
-  timeWrapAround
+  timeWrapAround ; determines the end of the day and of the week and skipps the nights
 
 
   ;---- Update of Global Variables
   ; update of global variables like for example fear, frustration and legitimation
   ;
-  ; if dailyFlag [
-  set L (1 / (exp((newarrest / num-citizens))))
-  count-new-arrests
-  ;    set dailyFlag false
-   ; ]
+  if dailyFlag [
+    ;update the number of newly arrested during the day
+    let nrOfArrest count citizens with [inPrison?]
+    set newArrest (nrOfArrest - oldarrest)
+    set oldArrest nrOfArrest
+
+    ; update the global legitimacy L
+    ;;;let dL ((L - L0 - newarrest / num-citizens) * exp(alfa))
+    ;;;set L max (list 0 (min (list (L0 + dL) 1)))
+    ;;;if Debug [print (word "updated legitimacy L = " L) ]
+
+  ]
+
+  if weeklyFlag [
+    ;update the global fear value
+    set glbFear (count citizens with [inPrison?]) / num-citizens
+     ; update the global legitimacy L
+    let dL ((L - L0 - newarrest / num-citizens) * exp(alfa))
+    set L max (list 0 (min (list (L0 + dL) 1)))
+    if Debug [print (word "updated legitimacy L = " L) ]
+
+  ]
+
+
 
   ; update for the observer functions like changes in number of arrests
   ;
+  ; average fear and frustration
+  set avrFear (sum [fear] of citizens) / num-citizens
+  set avrFrust (sum [vFrust] of citizens) / num-citizens
+  set avrAnger (sum [anger] of citizens) / num-citizens
+
 
 
   ;---- Agents to-go part -------------
@@ -195,15 +237,18 @@ to go
 
 
 
-
+ ; time flag resets
+  if dailyFlag [set dailyFlag false]
+  if weeklyFlag [set weeklyFlag false]
 
   ;recorder
  if vid:recorder-status = "recording" [
     if Source = "Only View" [vid:record-view] ; records the plane
     if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
-;Reset matrices every 100 ticks
-every 100 [reset-matrices]
+
+  ;print table:get hashTable "numToDemonstrate"
+
 end ; - to go part
 
 
@@ -222,11 +267,20 @@ to count-new-arrests
   let new-arrest (citizens with [(color = red) and inPrison?])
   set newarrest count new-arrest
 end
+
+to setupHashTable
+  set hashTable table:make
+  table:put hashTable "fear"  table:make
+  table:put hashTable "anger" table:make
+  table:put hashTable "frustration" table:make
+  table:put hashTable "numToDemonstrate" table:make
+  table:put hashTable "willToDemonstrate" table:make
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-549
+660
 10
-1731
+1842
 614
 -1
 -1
@@ -259,17 +313,17 @@ num-citizens
 num-citizens
 1
 150
-21.0
+136.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-464
-34
-527
-67
+580
+10
+643
+43
 setup
 setup
 NIL
@@ -283,10 +337,10 @@ NIL
 1
 
 BUTTON
-463
-83
-526
-116
+580
+55
+643
+88
 go
 go
 T
@@ -308,7 +362,7 @@ num-cops
 num-cops
 0
 150
-9.0
+12.0
 1
 1
 NIL
@@ -337,8 +391,8 @@ SLIDER
 cop-vision
 cop-vision
 1
-100
-9.0
+10
+3.0
 0.1
 1
 NIL
@@ -466,15 +520,15 @@ SWITCH
 383
 Debug
 Debug
-0
+1
 1
 -1000
 
 PLOT
-211
-213
-411
-363
+266
+10
+466
+160
 Legitimacy
 NIL
 NIL
@@ -489,21 +543,21 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot L"
 
 MONITOR
-47
-66
-173
-111
+30
+12
+95
+57
 NIL
-newarrest
-17
+newArrest
+0
 1
 11
 
 MONITOR
-215
-158
-328
-203
+487
+18
+538
+63
 NIL
 L
 17
@@ -511,20 +565,20 @@ L
 11
 
 CHOOSER
-292
-408
-474
-453
+487
+111
+643
+156
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
 1
 
 MONITOR
-221
-60
-327
-105
+120
+12
+226
+57
 show-time
 show-time
 0
@@ -532,26 +586,97 @@ show-time
 11
 
 MONITOR
-219
-108
-328
-153
-time-simulated
-time-simulated
+121
+65
+226
+110
+time-passed
+time-passed
 0
 1
 11
 
 MONITOR
-48
-141
-165
-186
+30
+62
+94
+107
 NIL
 count-free-citizens
 0
 1
 11
+
+PLOT
+265
+470
+465
+620
+Average Fear
+NIL
+NIL
+0.0
+1.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot avrFear"
+
+PLOT
+265
+165
+465
+315
+Average Frustration
+NIL
+NIL
+0.0
+1.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot avrFrust"
+
+PLOT
+265
+316
+465
+466
+Average Anger
+NIL
+NIL
+0.0
+1.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot avrAnger"
+
+BUTTON
+516
+201
+597
+234
+NIL
+printHash
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
