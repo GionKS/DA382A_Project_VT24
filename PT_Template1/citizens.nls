@@ -65,6 +65,7 @@ citizens-own [
   finalCondition; ----flag to indicate if the final condition is met
   safespot;---------- indicates if the current spot is save (not empty and not TownSquare)
   agTimer1;---------- local timer for agents
+ 
   
 ]
 
@@ -95,6 +96,7 @@ to setup-citizens
     set finishedState false
     set initialCondition false
     set finalCondition false
+    
   ]
 
 end
@@ -313,21 +315,13 @@ to listen-to-messages
   let msg 0
   let performative 0
   
-   set msg get-message
+   set msg get-message-no-remove
    set performative get-performative msg
   
-  if performative = "meeting-request" [
+  if performative = "Can we meet? If yes, home at my place or at yours?" [
     set proState "MeetingFriends"
-  ] 
-      
-end  
-
-
-to send-a-little-message
-  
-end  
-  
-  
+  ]       
+end   
   
   
 to study
@@ -361,15 +355,46 @@ to unemployed
 end
 
 to meeting
-  
- let msg 0  
+    
+  let msg 0
+  let msgout 0
+  let sender 0
+  set msg get-message
+  set sender get-sender msg   
   
   if Debug [print (word who " is in the proactive state MeetingFriends")]
+  
+   ifelse fear < 0.5 [              
+     ifelse pArrest < 0.5 [     
+      set destinationxy get-content msg
+      send add-content "yes, at your place" create-reply "reply-meeting" msg ;SES HOS DIG            
+      ]       
+        [ send add-content homeLoc create-reply "reply-meeting" msg; SES HOS MIG 
+      ; VÄNTA PÅ ATT KOMPIS KOMMER HIT. DÅ SKICKER HEN ETT INFORM HEY IM HERE 
+        ]     
+    ] 
+      [ send add-content "No" create-reply "reply-meeting" msg   
+      ] 
+  
+  ;-------------------------------------------------------------------------------------------------------------
 
   if (localxy = destinationxy) and (not initialCondition) [
     set initialCondition true
     set agTimer1 timeTaker (random 2) 55
     if Debug [print (word who " has arrived at a friends place")] ; SKICKA TILL KOMPIS EN INFORM ATT VI ÄR FRAMME? 
+    
+    set msgout create-message "arrived"
+    set msgout add-sender who msgout
+    set msgout add-receiver sender msgout
+    send msgout    
+    
+    ifelse ([fearValue] of sender) > fear 
+     [ set fear (1 + f) * fear ]
+      [ set fear (1 - f) * fear ] ;TODO: ask friend
+    
+    set msg create-message "arrived" 
+    set msg add-receiver "sender" msg
+    send msg
   ]
     if initialCondition and not finalCondition [;wait until timeTaker is finished
     if localtimeTakerDone agTimer1 [set finalCondition true]
@@ -380,31 +405,8 @@ to meeting
     set finalCondition false
     if Debug [print (word who " has decided to go home from THE VERY BEST FRIEND")]
     set destinationxy homeLoc ; go home again
-  ]
-  
-  
-  
-  
-  ifelse fear < 0.5 [        
-          
-     ifelse pArrest < 0.5 [
-      
-      set destinationxy get-content msg
-      send create-reply "agree" msg ;SES HOS DIG      
-      
-      ]   
-    
-    [ send add-content homeLoc create-reply "agree" msg; SES HOS MIG 
-      ; VÄNTA PÅ ATT KOMPIS KOMMER HIT. DÅ SKICKER HEN ETT INFORM HEY IM HERE 
-      ]
-     
-  ] [ send create-reply "refuse" msg    
-    ]
-  
-  
-  ;ifelse (ask friendList [fearValue]) > fear 
-  ;[ set fear (1 + f) * fear ]
-  ;[ set fear (1 - f) * fear ] TODO: ask friend
+  ] 
+
 end
 
 to go_out
