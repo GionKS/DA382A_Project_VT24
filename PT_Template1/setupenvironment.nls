@@ -87,11 +87,7 @@ to setup-environment
   
   
   ;---- setup of environment-variables
-  ;- time
-  set flagMorning true
-  set flagEvening false
-  set flagWeekend false
-  set time 0
+  ;
   
   
 end ;- setup environment
