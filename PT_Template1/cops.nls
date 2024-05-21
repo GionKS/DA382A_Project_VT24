@@ -76,31 +76,7 @@ to cop_behavior
   if any? citizens-here with [inPrison? = false] [ask suspect [ set fear (1 + 5 * f) * fear ]]
   let hunted one-of other citizens with [inPrison? = false] in-radius cop-vision
   
-  ;---test purpose
-  ;set destinationxy one-of patches with [region = "Restaurant"]
-  if copSource = "rule-of-law" [
-    set order "rule-of-law"
-    if [region] of patch-here = "TownSquare" [
-    let nbr-of-citizens count citizens in-radius 3
-  let xcor-here pxcor
-  let ycor-here pycor
-
-  update-town-square-matrix xcor-here ycor-here nbr-of-citizens
-  ]
-  ] 
-  if copSource = "arrest-troublemakers"
-  [
-    set order "arrest-troublemakers"
-      if [region] of patch-here = "TownSquare" [
-    let nbr-of-citizens count citizens in-radius 3
-  let xcor-here pxcor
-  let ycor-here pycor
-
-  update-town-square-matrix xcor-here ycor-here nbr-of-citizens
     
-  ]
-  ]
-  
   handle_queue
   
   if police-chief? [ cheif-behaviour ]
@@ -117,7 +93,11 @@ to cop_behavior
       (ifelse 
         suspect != nobody [arrest suspect]    
         hunted != nobody [catch hunted]
-        true [patrolAround])]
+        true [let places neighborhood with [region = "empty" or region = "TownSquare"]
+          if any? places [move-to one-of places]
+        ]
+        )
+      ]
   )   
 end 
 
@@ -137,7 +117,6 @@ to cheif-behaviour
         ask this-cop [
           set msg add-receiver who msg  
           set chosen-cops? true  
-          set shape "car"
         ]
       ]
       send msg 
@@ -157,7 +136,7 @@ to cheif-behaviour
           let report-ycor item (position "coordinates" data + 2) data
           set cluster-size item (position "cluster" data + 1) data
           
-         ; update-town-square-matrix report-xcor report-ycor cluster-size
+          update-town-square-matrix report-xcor report-ycor cluster-size
           
          
           print (word "Report received from cop at coordinates: " report-xcor " " report-ycor " with " cluster-size " civilians spotted.")
@@ -195,24 +174,21 @@ end
 
 
 to rule-of-law [suspect hunted]
+  handle-patrol-message
   if random 9 > 0 [set suspect nobody set hunted nobody]
 
   if hunted = last-hunted [set hunted nobody]
   if suspect = last-suspect [set suspect nobody]
 
- (ifelse
-    suspect != nobody and random 29 = 0 [arrest suspect set last-suspect suspect]
-    hunted != nobody [catch hunted set last-hunted hunted]
-    true [patrolAround])
+       (ifelse 
+        suspect != nobody [arrest suspect]    
+        hunted != nobody [catch hunted]
+        true [let places neighborhood with [region = "empty" or region = "TownSquare"]
+          if any? places [move-to one-of places]
+        ]
+        )
 end
  
-
-
-to patrolAround  
-  let places neighborhood with [region = "empty" or region = "TownSquare"]
-  if any? places [move-to one-of places]
-end
-
 
 
 to arrest [suspect]
@@ -499,7 +475,7 @@ to handle_queue
     print (word " message ADDEDDADDEEDDDAADDDEEDDAAAA to cop " who "'s queue")
     if get-performative msg = "stop-demonstration" [handle-demonstration get-content msg]
     if get-performative msg = "retreat" [set order "retreat"]
-    if get-performative msg = "patrol" [handle-patrol-message]
+    if get-performative msg = "patrol" [set order "rule-of-law"]
     set incoming-queue remove-item 0 incoming-queue
     
     let number-of-messages length incoming-queue
@@ -520,8 +496,7 @@ to handle-patrol-message
   let near-citizens count other citizens in-radius pvision
   let distance-moved sqrt((xcor - last-xcord) ^ 2 + (ycor - last-ycord) ^ 2)
 
-  if near-citizens >= 1  [
-  print (word " message NEEDS TO BE HANDLED!!!!! REPORT CLUSTER CLUSTERERRERERERERER")
+  if near-citizens >= 5  [
     let message-type "report"
     let content (list "coordinates" xcor ycor "cluster" near-citizens)
 
@@ -532,8 +507,6 @@ to handle-patrol-message
      set last-ycord ycor
 
     ]
-
-  patrolAround
 end
 
 
