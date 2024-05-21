@@ -66,6 +66,10 @@ citizens-own [
   safespot;---------- indicates if the current spot is save (not empty and not TownSquare)
   agTimer1;---------- local timer for agents
   agAlarm1
+  confirmed-participants 
+  demonstrateThreshold
+  comradeList
+  bool
   
 ]
 
@@ -98,6 +102,11 @@ to setup-citizens
     set finalCondition false
     set vFrust 0
     set managers-previously-announced []
+    set confirmed-participants []
+    set demonstrateThreshold 0
+    set comradeList []
+    set bool false
+    set proState "WalkingAround"
   ]
 
 end
@@ -232,6 +241,22 @@ to moveAround
   lt random 50
   fd 1
   if (vFrust > 0 and count-managers < 3) [select-managers]
+  potentialDemonstration
+  if (getCurrentHour = 16 and bool = true) [
+    ;print("Klockan är 16")
+    ;print "Confirmed participants list:"
+    ;foreach confirmed-participants [
+    ;  participant-id -> print participant-id
+    ;]
+    let participant-agents turtle-set (map [id -> turtle id] confirmed-participants)
+    ask participant-agents [
+      ;print("Jävla fyfan")
+      set walkdesire? false
+      set proState "Demonstration"
+      proactiveBehavior
+    ]
+  ]
+  ;task7_citizen_behavior
   if not (region = "empty" or region = "TownSquare") [
     ; find a place that is not a building!
     let footstep neighborhood with [region = "empty" or region = "TownSquare"] 
@@ -260,8 +285,14 @@ to proactiveBehavior
   ;########## Updating the Beliefs that are relevant only for the proactive states ##############
   ;
   ;
-  
-  
+  ifelse proState = "Demonstration" [
+    demonstrate
+    ] [
+    ; Handle other states
+    if proState = "WalkingAround" [
+      set walkdesire? true
+    ]
+  ]
   ; For testing purposes
   let StateList (list "Study" "Work" "Unemployed" "WalkingAround" "MeetingFriends" "Go_out" "Political" "Demonstration")
   
@@ -286,7 +317,7 @@ to proactiveBehavior
   ][
     ; code while the proactive state is not finished yet
     ; test 'study'
-    set proState "WalkingAround"
+    ;set proState "WalkingAround"
   ]
   
   ; For testing
@@ -360,25 +391,51 @@ end
 
 to demonstrate
   if Debug [print (word who " is in the proactive state Demonstration")]
+  print("DEMINSTRAUTNS")
+  set destinationxy one-of patches with [region = "TownSquare"]
+  moveToDestxy
+  
+  ask citizens with [color = white] [
+    set destinationxy one-of patches with [region = "TownSquare"]
+    moveToDestxy
+  ]
+  
 end
 
 ;""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 ;task 7
 to task7_citizen_behavior
   if not empty? incoming-queue [
-    let msg get-message
-    if get-performative msg = "request" [
-      ifelse is-list? get-content msg [
-        handle-multiple-options msg
+    ;print (word "Current incoming-queue for Citizen " who ": " (sentence incoming-queue))
+    let msg1 get-message
+     if get-performative msg1 = "request" [
+      ifelse is-list? get-content msg1 [
+        handle-multiple-options msg1
       ] [
-        handle-single-option msg
+        handle-single-option msg1
+        ;print(word "meddelande: " msg1)
       ]
+    ]
+    
+    foreach incoming-queue [
+      msg ->  ; Correct syntax to define 'msg' as the current item being processed
+      if (item 1 msg = "response" or item 2 msg = "I will join the demonstration.") [
+        ; Assuming 'item 0 msg' holds the sender's agent id or similar identifier
+        ;set confirmed-participants lput (item 0 msg) confirmed-participants
+      ]
+    ]
+    set incoming-queue []  ; Clear the message queue after processing
+        if not empty? confirmed-participants [
+      print (word "Citizen " who " has these confirmed participants: " (word confirmed-participants))
     ]
   ]
 end
 
 
+
+
 to handle-multiple-options [msg]
+  ;print("gick in i handle multiple option")
   let options order-options (get-content msg)
   let response create-reply "inform" msg
   set response add-content options response
@@ -386,9 +443,24 @@ to handle-multiple-options [msg]
 end
 
 to handle-single-option [msg]
-  let option get-content msg
+  ;print("gick in i handle single option")
+  let option get-content msg ;option = "Join demonstration"
   let decision make-decision option
-  let response create-reply "inform" msg
+  let sender-id who
+  ;--------------------------------------------------------------
+  
+  ;if decision = "Accept" [
+  ;  set confirmed-participants lput sender-id confirmed-participants
+  ;  set response add-content (word "Citizen " sender-id " will join the demonstration.") response
+  ;] 
+  ;if decision = "Decline" [
+  ;  set response add-content (word "Citizen " sender-id " will not join the demonstration.") response
+  ;]
+  
+  ;--------------------------------------------------------------
+  let response create-reply (word "Citizen " sender-id " will join the demonstration.") msg
+  ;set response add-content (word "Citizen " sender-id " will join the demonstration.") response
+  set confirmed-participants lput (item 0 response) confirmed-participants
   set response add-content decision response
   send response
 end
@@ -411,9 +483,14 @@ end
 
 
 to-report make-decision [option]
+  ;print("gick in i make decision")
   ; Assume there's a preferred option, otherwise, randomly decide
-  if option = "Movie" [
-    report "Accept"
+  if option = "Join demonstration?" [
+    ifelse random-float 1 < 0.5 [
+      report "Accept"
+    ][
+      report "Decline"
+    ]
   ]
   if random 2 = 0 [
     report "Accept"
@@ -456,36 +533,119 @@ end
 
 to become-manager
   set color green
-  set friendList (other turtles with [color != green])
+  set friendList (other turtles with [color = white])
   ; Ensure demonstration is only announced under specific conditions, e.g., only once when becoming a manager
   if not member? myself managers-previously-announced [
+    print "Announcement made for demonstration."
     announce-demonstration
+    
     set managers-previously-announced lput myself managers-previously-announced
   ]
 end
 
 
 to send-message [receiver performative content]
-  let msg (list self performative content)
-  let sender-who [who] of myself  ; Capture the sender's who number before entering the ask block
-  let message-content content  ; Create a local variable to capture the content before the ask block
-
-  ask receiver[
-    set incoming-queue lput msg incoming-queue
-    print (word "Message sent from " sender-who " to " [who] of myself ": " message-content)
+  let msg create-message performative
+  set msg add-content content msg
+  set msg add-receiver receiver msg
+  ;print (word "Sending message to " receiver ": " content)
+  ask receiver [  ; Directly use the agent variable
+    receive-message msg
   ]
+end
+
+to send-message1 [receiver performative content]
+  let msg create-message performative
+  set msg add-content content msg
+  set msg add-receiver receiver msg
+  ;print (word "Sending message to " receiver ": " content)
+  ask receiver [  ; Directly use the agent variable
+    receive-message1 msg
+    print("hejhejhej")
+  ]
+end
+
+to receive-message [msg]
+  let sender-id who
+  if (get-performative msg = "request" and get-content msg = "Join demonstration?") [
+    ; Decide to accept or decline based on some condition, e.g., randomly or based on a state
+    if random-float 1 < 0.5 [  ; Assume some probability to accept
+      let sender read-from-string (get-sender msg)  ; Konverterar strängen till ett tal
+      let response create-reply "response" msg
+      set response add-content "I will join the demonstration." response
+      ;print(word "Citizen " sender-id " will join")
+      set confirmed-participants lput sender-id confirmed-participants
+      
+      ask turtle sender [  ; Make sure the sender is correctly targeted
+        send response
+      ]
+      ;print "Confirmed participants list:"
+      ;foreach confirmed-participants [
+      ;  participant-id -> print participant-id
+      ;]
+    ]
+  ]
+end
+
+to receive-message1 [msg]
+  let sender-id who
+  if (get-performative msg = "request" and get-content msg = "16") [
+    set bool true
+    print("bool är true")
+    ]
+  
 end
 
 to announce-demonstration
   ask citizens with [color = green] [  ; Only managers
     ask friendList [  ; Directly ask each agent in the agentset
-      send-message myself "request" "Join demonstration?"
+      
+      send-message self "request" "Join demonstration?"
     ]
   ]
-  print "Announcement made for demonstration."
+  
 end
 
 to-report count-managers
   report count citizens with [color = green]
 end
+
+to report-confirmed-participants
+  foreach sort citizens [a-citizen ->
+    ask a-citizen [
+      if not empty? confirmed-participants [
+        print (word "Citizen " who " has these confirmed participants: " (word confirmed-participants))
+      ]
+    ]
+  ]
+end
+
+to potentialDemonstration
+  if (getCurrentHour = 15 and getCurrentMinute = 0) [
+    print("klockan är 15")
+    if length confirmed-participants >= demonstrateThreshold [
+      print("Förbi theshhold")
+      let participant-agents turtle-set (map [id -> turtle id] confirmed-participants)
+      ask participant-agents [
+        print("Request demonstration 16")
+        send-message1 self "request" "16"
+      ]
+      ;let msg create-message "demonstrationInfo"
+      ;set msg add-content "time13:00:00" msg
+      ;set msg add-multiple-receivers "listTask1" msg
+      ;send msg
+    ;] [
+      ;let msg create-message "cancelDemonstration"
+      ;set msg add-multiple-receivers "listTask1" msg
+      ;send msg
+      ;let new-friends confirmed-participants with [self != myself]
+      ;ask new-friends [
+      ;  set friendList lput myself friendList
+      ;]
+    ]
+  ]
+end
+
+
+
 

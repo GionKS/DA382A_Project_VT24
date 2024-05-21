@@ -25,6 +25,7 @@ __includes [
 ; ************ EXTENSIONS *****************
 extensions [
  vid bitmap; used for recording of the simulation
+ matrix
 ]
 ; ********************end extensions ********
 
@@ -51,6 +52,10 @@ globals [
   ; Global variables for the Observer to monitor the dynamics and the result of the simulation
   max-jailterm
   numPrisoners ; Number of prisoners
+
+  town-square-matrix
+  percentage-matrix
+  demonstrator-matrix
 
 
   ;----- Time variables
@@ -120,7 +125,8 @@ to setup
   set L 1
   set L0 (0.7 + random-float 0.2)
   set glbFear 0
-
+  set town-square-matrix matrix:make-constant 4 4 0
+  set percentage-matrix matrix:make-constant 4 4 0
 
   ; setup of the environment:
   setup-environment ;
@@ -280,7 +286,7 @@ num-citizens
 num-citizens
 1
 150
-25.0
+37.0
 1
 1
 NIL
@@ -329,7 +335,7 @@ num-cops
 num-cops
 0
 150
-45.0
+57.0
 1
 1
 NIL
@@ -344,7 +350,7 @@ citizen-vision
 citizen-vision
 1
 10
-3.0
+3.2
 0.1
 1
 NIL
@@ -359,7 +365,7 @@ cop-vision
 cop-vision
 1
 100
-9.0
+9.4
 0.1
 1
 NIL
@@ -531,16 +537,6 @@ L
 1
 11
 
-CHOOSER
-292
-408
-474
-453
-copSource
-copSource
-"rule-of-law" "arrest-troublemakers"
-1
-
 MONITOR
 221
 60
@@ -613,6 +609,16 @@ count turtles with [color = green]
 17
 1
 11
+
+CHOOSER
+292
+408
+474
+453
+copSource
+copSource
+"rule-of-law" "arrest-troublemakers"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
