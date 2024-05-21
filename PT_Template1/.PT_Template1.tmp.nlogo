@@ -140,7 +140,7 @@ to setup
 
   ; time section
   initTime ; initialize the time and clock variables
-
+;
   set dailyFlag false
 
 
