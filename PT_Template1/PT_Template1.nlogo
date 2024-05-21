@@ -5,10 +5,6 @@
 ;
 ;
 ;
-
-
-
-
 ; ************ INCLUDED FILES *****************
 __includes [
     "setupenvironment.nls" ; setup-functions for setting up the environment with houses town-square, work-places, prison, police-station, restaurants, ....
@@ -18,12 +14,13 @@ __includes [
     "communication.nls"; contains the extension for FIPA-like communication protocols
     "time_library.nls"; code for the time extension library
     "vid.nls" ; contains the code for the recorder. You also need to activate the vid-extension and the command at the end of setup
+
 ]
 ; ********************end included files ********
 
 ; ************ EXTENSIONS *****************
 extensions [
-   matrix
+  matrix
  vid bitmap; used for recording of the simulation
 ]
 ; ********************end extensions ********
@@ -38,16 +35,17 @@ globals [
   ;
   town-square-matrix
   percentage-matrix
-
   ; Global variables used by the citizen agents to adapt their local variables
   L;------------------------current global government legitimacy
-  newArrests;---------------number of newly arrested citizens during the time interval
+  L0; ---------------------- initial legitimacy
+  dL;------------------------difference in legitimacy
+  newarrest;---------------number of newly arrested citizens during the time interval
   alfa;---------------------constant factor that determines how fast arresting episodes are forgotten
   glbFear;------------------value for the collective global fear amongst citizen agents
   nArrests;-----------------Total number of currently arrested citizens
   Jmax;---------------------Maximum jail term that a citizen can be sentenced to
 
-  demonstrator-matrix
+
 
   ; Global variables for the Observer to monitor the dynamics and the result of the simulation
   max-jailterm
@@ -64,12 +62,13 @@ globals [
   tick-datetime
   sim-time               ; The current simulation time
   sim-start-time
-  start-time
+  ;start-time
   time-simulated   ; Text string showing how much time has been simulated, with the units specified on the Interface
   sim-start-logotime
-
   timeTaker-stop-time
-
+  dailyFlag
+  weeklyFlag
+  update-time-flags
 
 
   ;----- Spatial units, locations
@@ -83,7 +82,8 @@ globals [
   locRestaurant; location of the restaurant
   locSocialEvents; location of the volunteer place
   numFreeCitizens
-  newarrest
+  counter1;
+  managers-previously-announced  ; List to track which managers have already made announcements
 
 ]
 
@@ -115,8 +115,14 @@ to setup
   set numFreeCitizens 0
   set numPrisoners 0
   set newarrest 0
+  set alfa -0.8
+  set L 1
+  set L0 (0.7 + random-float 0.2)
+  set glbFear 0
+
   set town-square-matrix matrix:make-constant 4 4 0
   set percentage-matrix matrix:make-constant 4 4 0
+
   ; setup of the environment:
   setup-environment ;
   ; setup of all patches
@@ -127,9 +133,10 @@ to setup
   ; setup cops
   setup-cops
 
-
   ; time section
   initTime ; initialize the time and clock variables
+
+  set dailyFlag false
 
 
 
@@ -153,29 +160,39 @@ end
 ; ########################## TO GO/ STARTING PART ########################
 ;;
 to go
-
   ;---- Time updates
   ;
   tick ;- update time
-  update-time-flags ;- update time
+  ;update-time-flags ;- update time
 
   ;UPDATES THE VALUE OF TIME-SIMULATED FOR DISPLAY PURPOSE
-  set time-simulated (word (time:difference-between sim-start-time sim-time "minute") " minutes")
+  set time-passed (word (time:difference-between start-time current-time "minute") " minutes")
 
   timeWrapAround
 
-
+  if getCurrentHour = 8 and getCurrentMinute = 0 [set dailyFlag true]
+  if getCurrentDay = 1 and getCurrentHour = 8 and getCurrentMinute = 0 [set weeklyFlag true]
   ;---- Update of Global Variables
   ; update of global variables like for example fear, frustration and legitimation
   ;
-  ; if dailyFlag [
-  set L (1 / (exp((newarrest / num-citizens))))
-  count-new-arrests
-  ;    set dailyFlag false
-   ; ]
+  if dailyFlag [
+    ;set L (1 / (exp((newarrest / num-citizens))))
+    count-new-arrests
+    set dL ((L - L0 - newarrest / num-citizens) * exp(alfa))
+    ;set L max 0 (min (L0 + dl) 1)
+    set L max (list 0 (min (list (L0 + dL) 1)))
+    ;set L max 0 (min (L0 + dl) 1)
+    set counter1 0
+    set dailyFlag false
+    ]
+
+  ;if weeklyFlag [
+  ;countGlobalFear
+  ;]
 
   ; update for the observer functions like changes in number of arrests
   ;
+
 
 
   ;---- Agents to-go part -------------
@@ -185,7 +202,12 @@ to go
     ; based on the type of agent
     if (breed = citizens) [
       citizen_behavior ; code as defined in the include-file "citizens.nls
-      ]
+      count-new-arrests
+      set dL ((L - L0 - newarrest / num-citizens) * exp(alfa))
+      ;set L max 0 (min (L0 + dl) 1)
+      set L max (list 0 (min (list (L0 + dL) 1)))
+      countGlobalFear
+    ]
     if (breed = cops) [
       cop_behavior ; code as defined in the include-file "cops.nls"
       ]
@@ -194,16 +216,12 @@ to go
 
 
 
-
-
-
   ;recorder
  if vid:recorder-status = "recording" [
     if Source = "Only View" [vid:record-view] ; records the plane
     if Source = "With Interface" [vid:record-interface] ; records the interface
   ]
-;Reset matrices every 100 ticks
-every 100 [reset-matrices]
+
 end ; - to go part
 
 
@@ -221,6 +239,10 @@ end
 to count-new-arrests
   let new-arrest (citizens with [(color = red) and inPrison?])
   set newarrest count new-arrest
+end
+
+to countGlobalFear
+  set glbFear (newarrest / num-citizens)
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -248,7 +270,7 @@ GRAPHICS-WINDOW
 0
 1
 ticks
-60.0
+30.0
 
 SLIDER
 23
@@ -259,7 +281,7 @@ num-citizens
 num-citizens
 1
 150
-21.0
+25.0
 1
 1
 NIL
@@ -308,7 +330,7 @@ num-cops
 num-cops
 0
 150
-9.0
+45.0
 1
 1
 NIL
@@ -338,7 +360,7 @@ cop-vision
 cop-vision
 1
 100
-9.0
+46.0
 0.1
 1
 NIL
@@ -466,7 +488,7 @@ SWITCH
 383
 Debug
 Debug
-0
+1
 1
 -1000
 
@@ -518,7 +540,7 @@ CHOOSER
 copSource
 copSource
 "rule-of-law" "arrest-troublemakers"
-1
+0
 
 MONITOR
 221
@@ -550,6 +572,46 @@ MONITOR
 NIL
 count-free-citizens
 0
+1
+11
+
+MONITOR
+343
+73
+425
+118
+Global Fear
+glbFear
+17
+1
+11
+
+PLOT
+290
+467
+490
+617
+Global Fear
+NIL
+NIL
+0.0
+10.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot glbFear"
+
+MONITOR
+329
+138
+548
+183
+NIL
+count turtles with [color = green]
+17
 1
 11
 
