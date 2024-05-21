@@ -242,7 +242,7 @@ to moveAround
   fd 1
   if (vFrust > 0 and count-managers < 3) [select-managers]
   potentialDemonstration
-  if (getCurrentHour = 16 and bool = true) [
+  if (getCurrentHour = 14 and bool = true) [
     ;print("Klockan är 16")
     ;print "Confirmed participants list:"
     ;foreach confirmed-participants [
@@ -250,6 +250,7 @@ to moveAround
     ;]
     let participant-agents turtle-set (map [id -> turtle id] confirmed-participants)
     ask participant-agents [
+      ;set color pink
       ;print("Jävla fyfan")
       set walkdesire? false
       set proState "Demonstration"
@@ -391,14 +392,14 @@ end
 
 to demonstrate
   if Debug [print (word who " is in the proactive state Demonstration")]
-  print("DEMINSTRAUTNS")
+  ;print("DEMINSTRAUTNS")
   set destinationxy one-of patches with [region = "TownSquare"]
-  moveToDestxy
+  ;moveToDestxy
   
-  ask citizens with [color = white] [
-    set destinationxy one-of patches with [region = "TownSquare"]
-    moveToDestxy
-  ]
+  ;ask citizens with [color = white] [
+   ; set destinationxy one-of patches with [region = "TownSquare"]
+    ;moveToDestxy
+  ;]
   
 end
 
@@ -548,7 +549,7 @@ to send-message [receiver performative content]
   let msg create-message performative
   set msg add-content content msg
   set msg add-receiver receiver msg
-  ;print (word "Sending message to " receiver ": " content)
+  print (word "Sending message to " receiver ": " content)
   ask receiver [  ; Directly use the agent variable
     receive-message msg
   ]
@@ -558,40 +559,70 @@ to send-message1 [receiver performative content]
   let msg create-message performative
   set msg add-content content msg
   set msg add-receiver receiver msg
-  ;print (word "Sending message to " receiver ": " content)
+  print (word "Sending message to " receiver ": " content)
   ask receiver [  ; Directly use the agent variable
     receive-message1 msg
-    print("hejhejhej")
+    ;print("hejhejhej")
   ]
 end
+
+;to receive-message [msg]
+;  let sender-id who
+;  if (get-performative msg = "request" and get-content msg = "Join demonstration?") [
+;    ; Decide to accept or decline based on some condition, e.g., randomly or based on a state
+;    if random-float 1 < 0.5 [  ; Assume some probability to accept
+;      let sender read-from-string (get-sender msg)  ; Konverterar strängen till ett tal
+;      let response create-reply "response" msg
+;      set response add-content "I will join the demonstration." response
+;      print(word "Citizen " sender-id " will join")
+;      set confirmed-participants lput sender-id confirmed-participants
+;      
+;      ask turtle sender [  ; Make sure the sender is correctly targeted
+;        send response
+;      ]
+;      ;print "Confirmed participants list:"
+;      ;foreach confirmed-participants [
+;      ;  participant-id -> print participant-id
+;      ;]
+;    ]
+;    
+;  ]
+;end
 
 to receive-message [msg]
   let sender-id who
   if (get-performative msg = "request" and get-content msg = "Join demonstration?") [
-    ; Decide to accept or decline based on some condition, e.g., randomly or based on a state
-    if random-float 1 < 0.5 [  ; Assume some probability to accept
+    ; Beslut att acceptera eller avböja baserat på ett tillstånd eller en slumpmässig faktor
+    ifelse random-float 1 < 0.5 [  ; Anta någon sannolikhet att acceptera
       let sender read-from-string (get-sender msg)  ; Konverterar strängen till ett tal
       let response create-reply "response" msg
       set response add-content "I will join the demonstration." response
-      ;print(word "Citizen " sender-id " will join")
+      print (word "Citizen " sender-id " will join")
       set confirmed-participants lput sender-id confirmed-participants
       
-      ask turtle sender [  ; Make sure the sender is correctly targeted
+      ask turtle sender [  ; Se till att avsändaren riktas korrekt
         send response
       ]
-      ;print "Confirmed participants list:"
-      ;foreach confirmed-participants [
-      ;  participant-id -> print participant-id
-      ;]
+    ]
+    [
+      let sender read-from-string (get-sender msg)  ; Konverterar strängen till ett tal
+      let response create-reply "response" msg
+      set response add-content "i will not join" response
+      print (word "Citizen " sender-id " will not join")
+      
+      ask turtle sender [  ; Se till att avsändaren riktas korrekt
+        send response
+      ]
     ]
   ]
 end
 
+
 to receive-message1 [msg]
   let sender-id who
-  if (get-performative msg = "request" and get-content msg = "16") [
+  if (get-performative msg = "request" and get-content msg = "14") [
     set bool true
-    print("bool är true")
+    ;print("bool är true")
     ]
   
 end
@@ -621,14 +652,15 @@ to report-confirmed-participants
 end
 
 to potentialDemonstration
-  if (getCurrentHour = 15 and getCurrentMinute = 0) [
-    print("klockan är 15")
+  if (getCurrentHour = 13 and getCurrentMinute = 0) [
+    ;print("klockan är 15")
     if length confirmed-participants >= demonstrateThreshold [
-      print("Förbi theshhold")
+      ;print("Förbi theshhold")
       let participant-agents turtle-set (map [id -> turtle id] confirmed-participants)
       ask participant-agents [
-        print("Request demonstration 16")
-        send-message1 self "request" "16"
+        set color pink
+        ;print("Request demonstration 16")
+        send-message1 self "request" "14"
       ]
       ;let msg create-message "demonstrationInfo"
       ;set msg add-content "time13:00:00" msg
